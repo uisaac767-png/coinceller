@@ -23,14 +23,13 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 
-// Configure resolution strategy for reliability
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS) // Important
     repositories {
         google()
         mavenCentral()
-        maven { url = java.net.URI("https://plugins.gradle.org/m2") }
-        maven { url = java.net.URI("https://dl.google.com/dl/android/maven2/") }
+        maven { url = uri("https://plugins.gradle.org/m2") }
+        maven { url = uri("https://dl.google.com/dl/android/maven2/") }
     }
 }
 
