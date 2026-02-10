@@ -18,38 +18,22 @@ class _SignupScreenState extends State<SignupScreen> {
 
   void signup() async {
     setState(() => loading = true);
-    try {
-      await Future.delayed(const Duration(seconds: 3));
-      final ok = await ApiService.signup(
-        emailController.text.trim(),
-        passwordController.text.trim(),
-      );
 
-      if (ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Signup successful. Now login."),
-            backgroundColor: BybitTheme.success,
-          ),
-        );
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Signup failed"),
-            backgroundColor: BybitTheme.danger,
-          ),
-        );
-      }
-    } catch (e) {
+    final ok = await ApiService.signup(
+      emailController.text.trim(),
+      passwordController.text.trim(),
+    );
+
+    setState(() => loading = false);
+
+    if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Cannot connect to server"),
-          backgroundColor: BybitTheme.danger,
+          content: Text("Signup successful. Now login."),
+          backgroundColor: BybitTheme.success,
         ),
       );
-    } finally {
-      setState(() => loading = false);
+      Navigator.pop(context);
     }
   }
 
