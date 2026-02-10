@@ -29,7 +29,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 itemCount: txs.length,
                 itemBuilder: (_, i) {
                   final t = txs[i];
-
                   final isSend = t.type == "Send";
                   final icon = isSend
                       ? Icons.arrow_upward_rounded
@@ -53,29 +52,26 @@ class _TransactionScreenState extends State<TransactionScreen> {
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: BybitTheme.border),
                           ),
-                          child: Icon(
-                            icon,
-                            color: isSend ? BybitTheme.danger : BybitTheme.success,
-                          ),
+                          child: Icon(icon,
+                              color: isSend
+                                  ? BybitTheme.danger
+                                  : BybitTheme.success),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "${t.type} ${t.coin}",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                              Text("${t.type} ${t.coin}",
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700)),
                               const SizedBox(height: 4),
                               Text(
-                                t.address != null ? "To: ${t.address}" : "Wallet",
+                                t.address != null
+                                    ? "To: ${t.address}"
+                                    : "Wallet",
                                 style: const TextStyle(
-                                  color: BybitTheme.subText,
-                                  fontSize: 12,
-                                ),
+                                    color: BybitTheme.subText, fontSize: 12),
                               ),
                             ],
                           ),
@@ -83,9 +79,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         Text(
                           "${isSend ? "-" : "+"}${t.amount} ${t.coin}",
                           style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: isSend ? BybitTheme.danger : BybitTheme.success,
-                          ),
+                              fontWeight: FontWeight.w800,
+                              color: isSend
+                                  ? BybitTheme.danger
+                                  : BybitTheme.success),
                         ),
                       ],
                     ),
