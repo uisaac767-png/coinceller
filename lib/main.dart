@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'theme/bybit_theme.dart';
 import 'screens/auth_screen.dart';
+import 'theme/bybit_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,17 +12,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Celler Wallet',
       debugShowCheckedModeBanner: false,
+      title: 'Celler Wallet',
       theme: ThemeData(
-        primaryColor: BybitTheme.gold,
-        scaffoldBackgroundColor: BybitTheme.background,
-        colorScheme: ColorScheme.fromSeed(seedColor: BybitTheme.gold),
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: BybitTheme.text),
-        ),
+        scaffoldBackgroundColor: Colors.black, // ✅ fixed
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const AuthScreen(), // Entry point is AuthScreen
+      home: const AuthScreen(), // ✅ start from AuthScreen
     );
   }
 }
