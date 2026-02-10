@@ -23,14 +23,4 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS) // Important
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("https://plugins.gradle.org/m2") }
-        maven { url = uri("https://dl.google.com/dl/android/maven2/") }
-    }
-}
-
 include(":app")

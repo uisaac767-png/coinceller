@@ -1,6 +1,6 @@
 {
-    "name": "celler_app",
-    "short_name": "celler_app",
+    "name": "coin_celler",
+    "short_name": "coin_celler",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
