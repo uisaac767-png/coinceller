@@ -22,22 +22,7 @@ class MyApp extends StatelessWidget {
           bodyMedium: TextStyle(color: BybitTheme.text),
         ),
       ),
-      home: const AuthScreen(), // ✅ Launch AuthScreen first
-    );
-  }
-}            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+      home: const AuthScreen(), // Entry point is AuthScreen
     );
   }
 }
