@@ -15,7 +15,6 @@ class TransferScreen extends StatefulWidget {
 class _TransferScreenState extends State<TransferScreen> {
   final amountController = TextEditingController();
   final walletController = TextEditingController();
-
   String selectedCoin = "USDT";
   final coins = ["USDT", "BTC", "ETH", "TRON"];
 
@@ -35,14 +34,11 @@ class _TransferScreenState extends State<TransferScreen> {
 
     final ok = WalletService.transfer(selectedCoin, amount, address);
 
-    // ❌ insufficient
     if (!ok) {
       final current = WalletService.coinBalances[selectedCoin] ?? 0;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            "Insufficient Balance! You have only $current $selectedCoin",
-          ),
+          content: Text("Insufficient Balance! You have $current $selectedCoin"),
           backgroundColor: BybitTheme.danger,
         ),
       );
@@ -58,8 +54,7 @@ class _TransferScreenState extends State<TransferScreen> {
 
     amountController.clear();
     walletController.clear();
-
-    setState(() {}); // refresh balance on this screen
+    setState(() {}); // refresh balance
   }
 
   @override
@@ -80,7 +75,6 @@ class _TransferScreenState extends State<TransferScreen> {
               onChanged: (v) => setState(() => selectedCoin = v ?? "USDT"),
             ),
             const SizedBox(height: 10),
-
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -91,7 +85,6 @@ class _TransferScreenState extends State<TransferScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 14),
             CustomTextField(
               controller: walletController,
