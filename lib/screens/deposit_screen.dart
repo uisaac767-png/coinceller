@@ -15,7 +15,6 @@ class DepositScreen extends StatefulWidget {
 class _DepositScreenState extends State<DepositScreen> {
   String selectedCoin = "USDT";
   final amountController = TextEditingController();
-
   final coins = ["USDT", "BTC", "ETH", "TRON"];
 
   void depositNow() {
