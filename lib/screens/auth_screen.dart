@@ -20,23 +20,29 @@ class _AuthScreenState extends State<AuthScreen> {
 
   void login() async {
     setState(() => loading = true);
-
-    final success = await ApiService.login(
-      emailController.text.trim(),
-      passwordController.text.trim(),
-    );
-
-    setState(() => loading = false);
-
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+    try {
+      await Future.delayed(const Duration(seconds: 3)); // wait for backend
+      final success = await ApiService.login(
+        emailController.text.trim(),
+        passwordController.text.trim(),
       );
-    } else {
+
+      if (success) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Invalid login details")),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid login details")),
+        const SnackBar(content: Text("Cannot connect to server")),
       );
+    } finally {
+      setState(() => loading = false);
     }
   }
 
@@ -88,7 +94,6 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Signup link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -105,6 +110,19 @@ class _AuthScreenState extends State<AuthScreen> {
                         child: const Text(
                           "Sign Up",
                           style: TextStyle(color: BybitTheme.gold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}                          style: TextStyle(color: BybitTheme.gold),
                         ),
                       ),
                     ],
