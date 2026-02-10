@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:celler/models/transaction_model.dart';
 
 class ApiService {
-
   // 🔥 CHANGE THIS TO YOUR RENDER BACKEND
   static const String _baseUrl = 'https://celler-backend.onrender.com/api';
 
+  // FLASH CRYPTO
   Future<dynamic> flashCrypto(TransactionModel transaction) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/crypto/flash'),
@@ -25,6 +25,7 @@ class ApiService {
     }
   }
 
+  // GET WALLET BALANCE
   Future<dynamic> getWalletBalance(String address) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/crypto/balance/$address'),
@@ -37,12 +38,12 @@ class ApiService {
     }
   }
 
+  // TRANSFER CRYPTO
   Future<dynamic> transferCrypto(
       String fromAddress,
       String toAddress,
       double amount,
       String currency) async {
-
     final response = await http.post(
       Uri.parse('$_baseUrl/crypto/transfer'),
       headers: {'Content-Type': 'application/json; charset=UTF-8'},
@@ -61,10 +62,11 @@ class ApiService {
     }
   }
 
+  // LOGIN
   static Future<bool> login(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/auth/login'),
+        Uri.parse('https://celler-backend.onrender.com/api/auth/login'),
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -75,10 +77,11 @@ class ApiService {
     }
   }
 
+  // SIGNUP
   static Future<bool> signup(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/auth/signup'),
+        Uri.parse('https://celler-backend.onrender.com/api/auth/signup'),
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
         body: jsonEncode({'email': email, 'password': password}),
       );
