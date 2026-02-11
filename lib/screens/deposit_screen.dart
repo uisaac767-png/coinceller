@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/bybit_theme.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_text_field.dart';
-import '../widgets/dropdown_field.dart';
 import '../services/wallet_service.dart';
 
 class DepositScreen extends StatefulWidget {
@@ -13,33 +9,21 @@ class DepositScreen extends StatefulWidget {
 }
 
 class _DepositScreenState extends State<DepositScreen> {
-  String selectedCoin = "USDT";
   final amountController = TextEditingController();
-  final coins = ["USDT", "BTC", "ETH", "TRON"];
+  String selectedCoin = "USDT";
 
   void depositNow() {
-    final amount = double.tryParse(amountController.text.trim()) ?? 0;
+    final amount = double.tryParse(amountController.text) ?? 0;
 
-    final ok = WalletService.deposit(selectedCoin, amount);
-
-    if (!ok) {
+    if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Invalid deposit amount"),
-          backgroundColor: BybitTheme.danger,
-        ),
+        const SnackBar(content: Text("Invalid amount")),
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Deposited $amount $selectedCoin successfully"),
-        backgroundColor: BybitTheme.success,
-      ),
-    );
-
-    Navigator.pop(context, true); // return true to refresh dashboard
+    WalletService.deposit(selectedCoin, amount);
+    Navigator.pop(context);
   }
 
   @override
@@ -47,27 +31,19 @@ class _DepositScreenState extends State<DepositScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text("Deposit")),
       body: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            DropdownField<String>(
-              value: selectedCoin,
-              items: coins
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (v) => setState(() => selectedCoin = v ?? "USDT"),
-            ),
-            const SizedBox(height: 14),
-            CustomTextField(
+            TextField(
               controller: amountController,
-              hintText: "Enter amount ($selectedCoin)",
+              decoration: const InputDecoration(labelText: "Amount"),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 18),
-            CustomButton(
-              text: "Deposit $selectedCoin",
+            const SizedBox(height: 20),
+            ElevatedButton(
               onPressed: depositNow,
-            ),
+              child: const Text("Deposit"),
+            )
           ],
         ),
       ),
