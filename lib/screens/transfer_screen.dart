@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/bybit_theme.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_text_field.dart';
-import '../widgets/dropdown_field.dart';
 import '../services/wallet_service.dart';
 
 class TransferScreen extends StatefulWidget {
@@ -16,45 +12,22 @@ class _TransferScreenState extends State<TransferScreen> {
   final amountController = TextEditingController();
   final walletController = TextEditingController();
   String selectedCoin = "USDT";
-  final coins = ["USDT", "BTC", "ETH", "TRON"];
 
   void sendNow() {
+    final amount = double.tryParse(amountController.text) ?? 0;
     final address = walletController.text.trim();
-    final amount = double.tryParse(amountController.text.trim()) ?? 0;
 
-    if (address.isEmpty) {
+    if (address.isEmpty || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Enter recipient wallet address"),
-          backgroundColor: BybitTheme.danger,
-        ),
+        const SnackBar(content: Text("Invalid details")),
       );
       return;
     }
 
-    final ok = WalletService.transfer(selectedCoin, amount, address);
-
-    if (!ok) {
-      final current = WalletService.coinBalances[selectedCoin] ?? 0;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Insufficient Balance! You have $current $selectedCoin"),
-          backgroundColor: BybitTheme.danger,
-        ),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Sent $amount $selectedCoin successfully"),
-        backgroundColor: BybitTheme.success,
-      ),
-    );
-
+    WalletService.transfer(selectedCoin, amount, address);
     amountController.clear();
     walletController.clear();
-    setState(() {}); // refresh balance
+    setState(() {});
   }
 
   @override
@@ -64,43 +37,25 @@ class _TransferScreenState extends State<TransferScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text("Transfer")),
       body: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            DropdownField<String>(
-              value: selectedCoin,
-              items: coins
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (v) => setState(() => selectedCoin = v ?? "USDT"),
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Available: $balance $selectedCoin",
-                style: const TextStyle(
-                  color: BybitTheme.subText,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            CustomTextField(
+            Text("Balance: $balance $selectedCoin"),
+            TextField(
               controller: walletController,
-              hintText: "Recipient Wallet Address",
+              decoration:
+                  const InputDecoration(labelText: "Recipient Address"),
             ),
-            const SizedBox(height: 14),
-            CustomTextField(
+            TextField(
               controller: amountController,
-              hintText: "Amount ($selectedCoin)",
+              decoration: const InputDecoration(labelText: "Amount"),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 18),
-            CustomButton(
-              text: "Send $selectedCoin",
+            const SizedBox(height: 20),
+            ElevatedButton(
               onPressed: sendNow,
-            ),
+              child: const Text("Send"),
+            )
           ],
         ),
       ),
