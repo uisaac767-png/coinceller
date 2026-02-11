@@ -23,10 +23,10 @@ flutter:
   uses-material-design: true
 
   assets:
-    - Assets/Images/
-    - Assets/Config/Config.json
+    - assets/images/
+    - assets/config/config.json
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "Assets/Images/logo.png"
+  image_path: "assets/images/logo.png"
