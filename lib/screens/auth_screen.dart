@@ -78,25 +78,24 @@ class _AuthScreenState extends State<AuthScreen> {
                     onPressed: login,
                   ),
                   const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SignupScreen()),
-                      );
-                    },
-                    child: const Text("Sign Up",
-                        style: TextStyle(color: BybitTheme.gold)),
-                  )
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}                          style: TextStyle(color: BybitTheme.gold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "No account? ",
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const SignupScreen()),
+                          );
+                        },
+                        child: Text(
+                          "Sign Up",
+                          style: TextStyle(color: BybitTheme.gold),
                         ),
                       ),
                     ],
