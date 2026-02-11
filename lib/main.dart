@@ -7,19 +7,18 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  
   const MyApp({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Celler Wallet',
       theme: ThemeData(
-        scaffoldBackgroundColor: Colors.black, // ✅ fixed
+        scaffoldBackgroundColor: Colors.black,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const AuthScreen(), // ✅ start from AuthScreen
+      home: const AuthScreen(),
     );
   }
 }
