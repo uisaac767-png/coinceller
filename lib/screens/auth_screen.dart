@@ -18,7 +18,14 @@ class _AuthScreenState extends State<AuthScreen> {
   final passwordController = TextEditingController();
   bool loading = false;
 
-  void login() async {
+  Future<void> login() async {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("All fields required")),
+      );
+      return;
+    }
+
     setState(() => loading = true);
 
     final success = await ApiService.login(
@@ -27,6 +34,8 @@ class _AuthScreenState extends State<AuthScreen> {
     );
 
     setState(() => loading = false);
+
+    if (!mounted) return;
 
     if (success) {
       Navigator.pushReplacement(
@@ -50,29 +59,11 @@ class _AuthScreenState extends State<AuthScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  const Icon(Icons.account_balance_wallet_rounded,
-                      size: 60, color: BybitTheme.gold),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Celler Wallet",
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    "Securely manage your crypto assets",
-                    style: TextStyle(
-                      color: BybitTheme.subText,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 30),
+                  Image.asset("assets/images/logo.png", width: 90),
+                  const SizedBox(height: 20),
                   CustomTextField(
                     controller: emailController,
                     hintText: "Email",
-                    keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 14),
                   CustomTextField(
@@ -86,25 +77,26 @@ class _AuthScreenState extends State<AuthScreen> {
                     loading: loading,
                     onPressed: login,
                   ),
-                  const SizedBox(height: 12),
-
-                  // Signup link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("No account? ",
-                          style: TextStyle(color: BybitTheme.subText)),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const SignupScreen()),
-                          );
-                        },
-                        child: const Text(
-                          "Sign Up",
-                          style: TextStyle(color: BybitTheme.gold),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SignupScreen()),
+                      );
+                    },
+                    child: const Text("Sign Up",
+                        style: TextStyle(color: BybitTheme.gold)),
+                  )
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}                          style: TextStyle(color: BybitTheme.gold),
                         ),
                       ),
                     ],
