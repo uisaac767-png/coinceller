@@ -1,1 +1,7 @@
-
+{
+  "backendUrl": "https://celler-backend.onrender.com",
+  "defaultCurrency": "USD",
+  "flashEnabled": true,
+  "transactionFee": 0.5,
+  "supportEmail": "support@cellerwallet.com"
+}
