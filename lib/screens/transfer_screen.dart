@@ -13,6 +13,13 @@ class _TransferScreenState extends State<TransferScreen> {
   final walletController = TextEditingController();
   String selectedCoin = "USDT";
 
+  @override
+  void dispose() {
+    amountController.dispose();
+    walletController.dispose();
+    super.dispose();
+  }
+
   void sendNow() {
     final amount = double.tryParse(amountController.text) ?? 0;
     final address = walletController.text.trim();

@@ -49,7 +49,9 @@ class _WalletHomeState extends State<WalletHome> {
       context,
       MaterialPageRoute(builder: (_) => const DepositScreen()),
     );
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override

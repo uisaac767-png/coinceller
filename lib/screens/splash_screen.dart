@@ -26,9 +26,17 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Image.asset(
-          "assets/images/logo.png",
+        child: SizedBox(
           width: 120,
+          height: 120,
+          child: Image.asset(
+            "assets/images/logo.png",
+            width: 120,
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(Icons.account_balance_wallet_outlined,
+                  size: 80, color: Colors.grey);
+            },
+          ),
         ),
       ),
     );

@@ -12,6 +12,12 @@ class _DepositScreenState extends State<DepositScreen> {
   final amountController = TextEditingController();
   String selectedCoin = "USDT";
 
+  @override
+  void dispose() {
+    amountController.dispose();
+    super.dispose();
+  }
+
   void depositNow() {
     final amount = double.tryParse(amountController.text) ?? 0;
 

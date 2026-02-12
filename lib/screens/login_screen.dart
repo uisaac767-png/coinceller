@@ -17,6 +17,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
   bool loading = false;
 
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> login() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -32,9 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
       passwordController.text.trim(),
     );
 
-    setState(() => loading = false);
-
     if (!mounted) return;
+
+    setState(() => loading = false);
 
     if (success) {
       Navigator.pushReplacement(
@@ -56,7 +63,18 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset("assets/images/logo.png", width: 90),
+            SizedBox(
+              width: 90,
+              height: 90,
+              child: Image.asset(
+                "assets/images/logo.png",
+                width: 90,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.account_balance_wallet_outlined,
+                      size: 60, color: Colors.grey);
+                },
+              ),
+            ),
             const SizedBox(height: 30),
             CustomTextField(
               controller: emailController,

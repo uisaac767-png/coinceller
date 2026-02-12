@@ -22,20 +22,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void loadCurrency() async {
-    final c = await LocalStorageService.getCurrency();
-    setState(() => currency = c);
+    try {
+      final c = await LocalStorageService.getCurrency();
+      if (mounted) {
+        setState(() => currency = c);
+      }
+    } catch (e) {
+      // Fallback to USD if loading fails
+      if (mounted) {
+        setState(() => currency = Currency.usd);
+      }
+    }
   }
 
   void changeCurrency(Currency newCurrency) async {
-    await LocalStorageService.setCurrency(newCurrency);
-    setState(() => currency = newCurrency);
+    try {
+      await LocalStorageService.setCurrency(newCurrency);
+      if (mounted) {
+        setState(() => currency = newCurrency);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Currency changed to ${CurrencyService.name(newCurrency)}"),
-        backgroundColor: BybitTheme.success,
-      ),
-    );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Currency changed to ${CurrencyService.name(newCurrency)}"),
+            backgroundColor: BybitTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to change currency"),
+            backgroundColor: BybitTheme.danger,
+          ),
+        );
+      }
+    }
   }
 
   @override
