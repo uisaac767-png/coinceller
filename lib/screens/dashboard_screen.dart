@@ -44,6 +44,8 @@ class WalletHome extends StatefulWidget {
 }
 
 class _WalletHomeState extends State<WalletHome> {
+  bool hardRefreshing = false;
+
   Future<void> openDeposit() async {
     await Navigator.push(
       context,
@@ -54,79 +56,147 @@ class _WalletHomeState extends State<WalletHome> {
     }
   }
 
+  Future<void> refreshNow() async {
+    final result = await WalletService.refreshFromBackend();
+    if (!mounted) return;
+    setState(() {});
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result),
+          backgroundColor: Colors.orange.shade700,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Wallet refreshed"),
+          backgroundColor: BybitTheme.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> hardRefreshNow() async {
+    if (hardRefreshing) return;
+    setState(() => hardRefreshing = true);
+    final result = await WalletService.hardRefresh();
+    if (!mounted) return;
+    setState(() => hardRefreshing = false);
+    setState(() {});
+
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result),
+          backgroundColor: Colors.orange.shade700,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Hard refresh completed"),
+          backgroundColor: BybitTheme.success,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalUsd = WalletService.totalUsd();
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Wallet",
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: BybitTheme.text)),
-            const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                "assets/images/home_banner.png",
-                width: double.infinity,
-                height: 130,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+      child: RefreshIndicator(
+        onRefresh: refreshNow,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text("Wallet",
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: BybitTheme.text)),
+                  ),
+                  IconButton(
+                    onPressed: hardRefreshing ? null : hardRefreshNow,
+                    icon: hardRefreshing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh, color: BybitTheme.gold),
+                    tooltip: "Hard Refresh",
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  "assets/images/home_banner.png",
+                  width: double.infinity,
                   height: 130,
-                  color: BybitTheme.card,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 130,
+                    color: BybitTheme.card,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text("\$${totalUsd.toStringAsFixed(2)}",
-                style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: BybitTheme.gold)),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: openDeposit,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _actionImage("assets/images/flash_icon.png"),
-                        const SizedBox(width: 8),
-                        const Text("Deposit"),
-                      ],
+              const SizedBox(height: 20),
+              Text("\$${totalUsd.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: BybitTheme.gold)),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: openDeposit,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _actionImage("assets/images/flash_icon.png"),
+                          const SizedBox(width: 8),
+                          const Text("Deposit"),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const TransferScreen()));
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _actionImage("assets/images/send_icon.png"),
-                        const SizedBox(width: 8),
-                        const Text("Send"),
-                      ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TransferScreen()));
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _actionImage("assets/images/send_icon.png"),
+                          const SizedBox(width: 8),
+                          const Text("Send"),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            )
-          ],
+                ],
+              ),
+              const SizedBox(height: 400),
+            ],
+          ),
         ),
       ),
     );

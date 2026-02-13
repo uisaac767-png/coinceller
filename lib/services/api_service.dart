@@ -14,6 +14,8 @@ class ApiService {
   static List<String> _baseUrls = List<String>.from(_defaultBaseUrls);
   static String _activeBaseUrl = _defaultBaseUrls.first;
 
+  static String get activeBaseUrl => _activeBaseUrl;
+
   static void configureBaseUrl(String baseUrl) {
     final normalized = _normalizeApiBase(baseUrl);
     if (normalized == null) return;
@@ -87,6 +89,33 @@ class ApiService {
     throw Exception(lastError?.toString() ?? 'GET request failed');
   }
 
+  static String _rootFromApiBase(String apiBaseUrl) {
+    if (apiBaseUrl.endsWith('/api')) {
+      return apiBaseUrl.substring(0, apiBaseUrl.length - 4);
+    }
+    return apiBaseUrl;
+  }
+
+  static Future<dynamic> getServerStatus() async {
+    Object? lastError;
+    final tried = <String>{_activeBaseUrl, ..._baseUrls};
+    for (final apiBase in tried) {
+      final root = _rootFromApiBase(apiBase);
+      try {
+        final response = await http
+            .get(Uri.parse('$root/'))
+            .timeout(const Duration(seconds: 30));
+        if (response.statusCode == 200) {
+          _activeBaseUrl = apiBase;
+          return jsonDecode(response.body);
+        }
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    throw Exception(lastError?.toString() ?? 'Failed to get server status');
+  }
+
   Future<dynamic> flashCrypto(TransactionModel transaction) async {
     try {
       final response = await _post(
@@ -119,7 +148,7 @@ class ApiService {
   Future<dynamic> transferCrypto(String fromAddress, String toAddress,
       double amount, String currency) async {
     try {
-      final response = await _post(
+      var response = await _post(
         '/transfer',
         body: {
           'fromAddress': fromAddress,
@@ -128,8 +157,63 @@ class ApiService {
           'currency': currency,
         },
       );
+
+      if (response.statusCode != 200) {
+        // Backend also exposes /crypto/transfer in cryptoRoutes.
+        response = await _post(
+          '/crypto/transfer',
+          body: {
+            'fromAddress': fromAddress,
+            'toAddress': toAddress,
+            'amount': amount,
+            'currency': currency,
+          },
+        );
+      }
+
       if (response.statusCode == 200) return jsonDecode(response.body);
       throw Exception('Failed to transfer crypto');
+    } catch (e, st) {
+      _handleError(e, st);
+      rethrow;
+    }
+  }
+
+  Future<dynamic> updateWalletBalance(
+      String address, double amount, String currency) async {
+    try {
+      final response = await _post(
+        '/crypto/updateBalance',
+        body: {
+          'address': address,
+          'amount': amount,
+          'currency': currency,
+        },
+      );
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      throw Exception('Failed to update wallet balance');
+    } catch (e, st) {
+      _handleError(e, st);
+      rethrow;
+    }
+  }
+
+  Future<dynamic> sendUsdt(Map<String, dynamic> payload) async {
+    try {
+      final response = await _post('/crypto/sendUSDT', body: payload);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      throw Exception('Failed to call sendUSDT');
+    } catch (e, st) {
+      _handleError(e, st);
+      rethrow;
+    }
+  }
+
+  Future<dynamic> sendTrx(Map<String, dynamic> payload) async {
+    try {
+      final response = await _post('/crypto/sendTRX', body: payload);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      throw Exception('Failed to call sendTRX');
     } catch (e, st) {
       _handleError(e, st);
       rethrow;

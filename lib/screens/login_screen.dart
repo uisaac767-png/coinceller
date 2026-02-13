@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/local_storage_service.dart';
 import '../theme/bybit_theme.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
@@ -45,6 +46,10 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => loading = false);
 
     if (success) {
+      await LocalStorageService.saveUser(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const DashboardScreen()),

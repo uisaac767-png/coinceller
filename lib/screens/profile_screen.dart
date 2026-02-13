@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import 'login_screen.dart';
 import '../theme/bybit_theme.dart';
 import '../services/currency_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/wallet_service.dart';
 import '../widgets/dropdown_field.dart';
 import '../widgets/settings_dialog.dart';
 
@@ -14,6 +17,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   Currency currency = Currency.usd;
+  bool syncing = false;
 
   @override
   void initState() {
@@ -59,6 +63,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  Future<void> logout() async {
+    await LocalStorageService.clearUser();
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
+
+  Future<void> syncNow() async {
+    if (syncing) return;
+    setState(() => syncing = true);
+
+    String message = "Data synced";
+    Color color = BybitTheme.success;
+
+    try {
+      await ApiService.getProfile();
+      await ApiService.getDashboard();
+      await ApiService.getTransactions();
+      final walletSync = await WalletService.syncWalletFromBackend();
+      if (walletSync != null) {
+        message = walletSync;
+        color = Colors.orange.shade700;
+      }
+    } catch (e) {
+      message = "Sync failed: $e";
+      color = BybitTheme.danger;
+    }
+
+    if (!mounted) return;
+    setState(() => syncing = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+      ),
+    );
   }
 
   @override
@@ -131,7 +177,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: () {
                 showDialog(
                   context: context,
-                  builder: (_) => const SettingsDialog(),
+                  builder: (_) => SettingsDialog(
+                    onLogout: logout,
+                    onSync: syncNow,
+                  ),
                 );
               },
               shape: RoundedRectangleBorder(
@@ -150,7 +199,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               title: const Text("Settings"),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            )
+            ),
+            const SizedBox(height: 12),
+            if (syncing)
+              const LinearProgressIndicator(
+                minHeight: 3,
+                color: BybitTheme.gold,
+                backgroundColor: BybitTheme.card2,
+              ),
           ],
         ),
       ),
