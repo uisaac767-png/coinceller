@@ -50,6 +50,26 @@ class WalletService {
     unawaited(LocalStorageService.saveTransactions(transactions));
   }
 
+  static void recordTransaction({
+    required String type,
+    required String coin,
+    required double amount,
+    String? address,
+  }) {
+    transactions.insert(
+      0,
+      TransactionModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        type: type,
+        coin: coin,
+        amount: amount,
+        date: DateTime.now().toString(),
+        address: address,
+      ),
+    );
+    _persistState();
+  }
+
   static Future<String?> syncWalletFromBackend({
     String coin = 'USDT',
   }) async {
@@ -141,18 +161,7 @@ class WalletService {
     if (amount <= 0) return false;
 
     coinBalances[coin] = (coinBalances[coin] ?? 0) + amount;
-
-    transactions.insert(
-      0,
-      TransactionModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        type: "Deposit",
-        coin: coin,
-        amount: amount,
-        date: DateTime.now().toString(),
-      ),
-    );
-
+    recordTransaction(type: "Deposit", coin: coin, amount: amount);
     _persistState();
     return true;
   }
@@ -169,18 +178,12 @@ class WalletService {
     // deduct
     coinBalances[coin] = currentBalance - amount;
 
-    transactions.insert(
-      0,
-      TransactionModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        type: "Send",
-        coin: coin,
-        amount: amount,
-        date: DateTime.now().toString(),
-        address: toAddress,
-      ),
+    recordTransaction(
+      type: "Send",
+      coin: coin,
+      amount: amount,
+      address: toAddress,
     );
-
     _persistState();
     return true;
   }

@@ -18,11 +18,15 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   Currency currency = Currency.usd;
   bool syncing = false;
+  bool backendOnline = false;
+  bool checkingBackend = false;
+  String backendBaseUrl = ApiService.activeBaseUrl;
 
   @override
   void initState() {
     super.initState();
     loadCurrency();
+    checkBackendStatus();
   }
 
   void loadCurrency() async {
@@ -65,6 +69,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> checkBackendStatus() async {
+    if (checkingBackend) return;
+    setState(() => checkingBackend = true);
+
+    try {
+      await ApiService.getServerStatus();
+      if (!mounted) return;
+      setState(() {
+        backendOnline = true;
+        backendBaseUrl = ApiService.activeBaseUrl;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        backendOnline = false;
+        backendBaseUrl = ApiService.activeBaseUrl;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => checkingBackend = false);
+      }
+    }
+  }
+
   Future<void> logout() async {
     await LocalStorageService.clearUser();
     if (!mounted) return;
@@ -97,6 +125,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       color = BybitTheme.danger;
     }
 
+    await checkBackendStatus();
+
     if (!mounted) return;
     setState(() => syncing = false);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -115,6 +145,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(18),
         child: Column(
           children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: BybitTheme.card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: BybitTheme.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: backendOnline
+                          ? BybitTheme.success
+                          : BybitTheme.danger,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    backendOnline ? "Backend: ONLINE" : "Backend: OFFLINE",
+                    style: const TextStyle(
+                      color: BybitTheme.text,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: checkingBackend ? null : checkBackendStatus,
+                    icon: checkingBackend
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(
+                            Icons.refresh,
+                            size: 18,
+                            color: BybitTheme.gold,
+                          ),
+                    tooltip: "Refresh backend status",
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Base URL: $backendBaseUrl",
+                style: const TextStyle(color: BybitTheme.subText, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
             Container(
               width: 80,
               height: 80,
