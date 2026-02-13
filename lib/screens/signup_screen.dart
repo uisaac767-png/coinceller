@@ -52,20 +52,20 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => loading = true);
 
-    final ok = await ApiService.signup(username, email, password);
+    final error = await ApiService.signup(username, email, password);
 
     if (!mounted) return;
 
     setState(() => loading = false);
 
-    if (ok) {
+    if (error == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Signup successful. Please log in.")),
       );
       Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Signup failed. Try another email.")),
+        SnackBar(content: Text(error)),
       );
     }
   }

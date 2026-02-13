@@ -87,24 +87,64 @@ class ApiService {
     }
   }
 
-  static Future<bool> signup(
+  static Future<String?> signup(
       String username, String email, String password) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/auth/register'),
-            headers: {'Content-Type': 'application/json; charset=UTF-8'},
-            body: jsonEncode({
-              'username': username,
-              'email': email,
-              'password': password,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
-      return response.statusCode == 200 || response.statusCode == 201;
+      final attempts = <Map<String, dynamic>>[
+        {
+          'path': '/auth/register',
+          'body': {'username': username, 'email': email, 'password': password},
+        },
+        {
+          'path': '/auth/signup',
+          'body': {'username': username, 'email': email, 'password': password},
+        },
+        {
+          'path': '/auth/register',
+          'body': {'name': username, 'email': email, 'password': password},
+        },
+        {
+          'path': '/auth/signup',
+          'body': {'email': email, 'password': password},
+        },
+      ];
+
+      String? lastError;
+
+      for (final attempt in attempts) {
+        final response = await http
+            .post(
+              Uri.parse('$_baseUrl${attempt['path']}'),
+              headers: {'Content-Type': 'application/json; charset=UTF-8'},
+              body: jsonEncode(attempt['body']),
+            )
+            .timeout(const Duration(seconds: 30));
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return null;
+        }
+
+        lastError = _extractErrorMessage(response.body) ??
+            'Signup failed (${response.statusCode})';
+      }
+
+      return lastError ?? 'Signup request rejected by server';
     } catch (e, st) {
       _handleError(e, st);
-      return false;
+      return 'Could not reach server. Check internet/server and try again.';
     }
+  }
+
+  static String? _extractErrorMessage(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message'] ?? decoded['error'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message.trim();
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 }
