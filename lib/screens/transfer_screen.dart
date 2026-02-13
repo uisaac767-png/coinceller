@@ -62,6 +62,12 @@ class _TransferScreenState extends State<TransferScreen> {
     }
   }
 
+  String _extractErrorMessage(Object error) {
+    final raw = error.toString();
+    if (raw.isEmpty) return "Transfer failed. Check wallet details.";
+    return raw.replaceFirst("Exception: ", "");
+  }
+
   Future<void> sendNow() async {
     final amount = double.tryParse(amountController.text) ?? 0;
     final senderAddress = senderWalletController.text.trim();
@@ -107,18 +113,6 @@ class _TransferScreenState extends State<TransferScreen> {
       return;
     }
 
-    final recipientExists = await _walletExists(recipientAddress);
-    if (!recipientExists) {
-      if (!mounted) return;
-      setState(() => loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Wrong address: recipient wallet does not exist."),
-        ),
-      );
-      return;
-    }
-
     try {
       await apiService.transferCrypto(
         senderAddress,
@@ -145,11 +139,12 @@ class _TransferScreenState extends State<TransferScreen> {
         const SnackBar(content: Text("Transfer successful")),
       );
       setState(() {});
-    } catch (_) {
+      await WalletService.syncWalletFromBackend(coin: selectedCoin);
+    } catch (e) {
       if (!mounted) return;
       setState(() => loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Transfer failed. Check wallet details.")),
+        SnackBar(content: Text(_extractErrorMessage(e))),
       );
     }
   }
