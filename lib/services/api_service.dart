@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
@@ -45,6 +46,7 @@ class ApiService {
   static Future<http.Response> _post(
     String path, {
     required Map<String, dynamic> body,
+    Duration timeout = const Duration(seconds: 30),
   }) async {
     Object? lastError;
     final tried = <String>{_activeBaseUrl, ..._baseUrls};
@@ -56,7 +58,7 @@ class ApiService {
               headers: {'Content-Type': 'application/json; charset=UTF-8'},
               body: jsonEncode(body),
             )
-            .timeout(const Duration(seconds: 30));
+            .timeout(timeout);
         _activeBaseUrl = baseUrl;
         return response;
       } catch (e) {
@@ -66,14 +68,16 @@ class ApiService {
     throw Exception(lastError?.toString() ?? 'POST request failed');
   }
 
-  static Future<http.Response> _get(String path) async {
+  static Future<http.Response> _get(
+    String path, {
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     Object? lastError;
     final tried = <String>{_activeBaseUrl, ..._baseUrls};
     for (final baseUrl in tried) {
       try {
-        final response = await http
-            .get(Uri.parse('$baseUrl$path'))
-            .timeout(const Duration(seconds: 30));
+        final response =
+            await http.get(Uri.parse('$baseUrl$path')).timeout(timeout);
         _activeBaseUrl = baseUrl;
         return response;
       } catch (e) {
@@ -147,15 +151,41 @@ class ApiService {
 
   static Future<String?> signup(
       String username, String email, String password) async {
+    final payload = {
+      'username': username,
+      'email': email,
+      'password': password,
+    };
+
     try {
-      final response = await _post(
-        '/auth/register',
-        body: {
-          'username': username,
-          'email': email,
-          'password': password,
-        },
-      );
+      late http.Response response;
+      var lastError = '';
+      var success = false;
+
+      for (var attempt = 1; attempt <= 2; attempt++) {
+        try {
+          response = await _post(
+            '/auth/register',
+            body: payload,
+            timeout: const Duration(seconds: 60),
+          );
+          success = true;
+          break;
+        } catch (e) {
+          lastError = e.toString();
+          if (attempt == 1) {
+            await Future<void>.delayed(const Duration(seconds: 2));
+          }
+        }
+      }
+
+      if (!success) {
+        if (lastError.contains('TimeoutException') ||
+            lastError.toLowerCase().contains('timed out')) {
+          return 'Server is taking too long. Wait 30-60 seconds and try again.';
+        }
+        return 'Could not reach server. Check internet/server and try again.';
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return null;
