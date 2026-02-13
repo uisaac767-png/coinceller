@@ -26,24 +26,37 @@ class BottomNavigator extends StatelessWidget {
         elevation: 0,
         selectedItemColor: BybitTheme.gold,
         unselectedItemColor: BybitTheme.subText,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet_outlined),
+            icon: _navIcon("assets/images/wallet_icon.png"),
             label: "Wallet",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.swap_horiz_rounded),
+            icon: _navIcon("assets/images/send_icon.png"),
             label: "Transfer",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_outlined),
+            icon: _navIcon("assets/images/transaction_icon.png"),
             label: "History",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
+            icon: _navIcon("assets/images/profile_icon.png"),
             label: "Profile",
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _navIcon(String assetPath) {
+    return SizedBox(
+      width: 22,
+      height: 22,
+      child: Image.asset(
+        assetPath,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.circle, size: 18, color: BybitTheme.subText),
       ),
     );
   }

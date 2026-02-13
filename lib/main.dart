@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'screens/auth_screen.dart';
+import 'screens/splash_screen.dart';
+import 'theme/bybit_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +11,8 @@ void main() {
   FlutterError.onError = (FlutterErrorDetails details) {
     // In release mode, forward to zone handler so we can log it.
     if (kReleaseMode) {
-      Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
+      Zone.current.handleUncaughtError(
+          details.exception, details.stack ?? StackTrace.current);
     } else {
       FlutterError.presentError(details);
     }
@@ -34,11 +36,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Celler Wallet',
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const AuthScreen(),
+      theme: BybitTheme.themeData,
+      home: const SplashScreen(),
     );
   }
 }

@@ -10,7 +10,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -25,19 +24,30 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: SizedBox(
-          width: 120,
-          height: 120,
-          child: Image.asset(
-            "assets/images/logo.png",
-            width: 120,
-            errorBuilder: (context, error, stackTrace) {
-              return const Icon(Icons.account_balance_wallet_outlined,
-                  size: 80, color: Colors.grey);
-            },
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            "assets/images/splash.png",
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(color: Colors.black),
           ),
-        ),
+          Container(color: Colors.black.withOpacity(0.45)),
+          Center(
+            child: SizedBox(
+              width: 120,
+              height: 120,
+              child: Image.asset(
+                "assets/images/logo.png",
+                width: 120,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.account_balance_wallet_outlined,
+                      size: 80, color: Colors.grey);
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

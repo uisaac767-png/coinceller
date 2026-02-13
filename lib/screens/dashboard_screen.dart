@@ -69,6 +69,20 @@ class _WalletHomeState extends State<WalletHome> {
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: BybitTheme.text)),
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                "assets/images/home_banner.png",
+                width: double.infinity,
+                height: 130,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 130,
+                  color: BybitTheme.card,
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
             Text("\$${totalUsd.toStringAsFixed(2)}",
                 style: const TextStyle(
@@ -81,7 +95,14 @@ class _WalletHomeState extends State<WalletHome> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: openDeposit,
-                    child: const Text("Deposit"),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _actionImage("assets/images/flash_icon.png"),
+                        const SizedBox(width: 8),
+                        const Text("Deposit"),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -93,12 +114,35 @@ class _WalletHomeState extends State<WalletHome> {
                           MaterialPageRoute(
                               builder: (_) => const TransferScreen()));
                     },
-                    child: const Text("Send"),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _actionImage("assets/images/send_icon.png"),
+                        const SizedBox(width: 8),
+                        const Text("Send"),
+                      ],
+                    ),
                   ),
                 ),
               ],
             )
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionImage(String assetPath) {
+    return SizedBox(
+      width: 16,
+      height: 16,
+      child: Image.asset(
+        assetPath,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.circle,
+          size: 14,
+          color: Colors.black54,
         ),
       ),
     );

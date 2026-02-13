@@ -30,9 +30,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 itemBuilder: (_, i) {
                   final t = txs[i];
                   final isSend = t.type == "Send";
-                  final icon = isSend
-                      ? Icons.arrow_upward_rounded
-                      : Icons.arrow_downward_rounded;
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -52,10 +49,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: BybitTheme.border),
                           ),
-                          child: Icon(icon,
-                              color: isSend
-                                  ? BybitTheme.danger
-                                  : BybitTheme.success),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Image.asset(
+                              "assets/images/transaction_icon.png",
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(
+                                isSend
+                                    ? Icons.arrow_upward_rounded
+                                    : Icons.arrow_downward_rounded,
+                                color: isSend
+                                    ? BybitTheme.danger
+                                    : BybitTheme.success,
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(

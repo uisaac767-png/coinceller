@@ -43,7 +43,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Currency changed to ${CurrencyService.name(newCurrency)}"),
+            content: Text(
+                "Currency changed to ${CurrencyService.name(newCurrency)}"),
             backgroundColor: BybitTheme.success,
           ),
         );
@@ -76,7 +77,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: BybitTheme.border),
               ),
-              child: const Icon(Icons.person, size: 45, color: BybitTheme.gold),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Image.asset(
+                  "assets/images/profile_icon.png",
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.person,
+                      size: 45, color: BybitTheme.gold),
+                ),
+              ),
             ),
             const SizedBox(height: 14),
             const Text(
@@ -129,7 +138,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               tileColor: BybitTheme.card,
-              leading: const Icon(Icons.settings, color: BybitTheme.gold),
+              leading: SizedBox(
+                width: 24,
+                height: 24,
+                child: Image.asset(
+                  "assets/images/settings_icon.png",
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.settings, color: BybitTheme.gold),
+                ),
+              ),
               title: const Text("Settings"),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             )

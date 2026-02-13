@@ -35,7 +35,23 @@ class _DepositScreenState extends State<DepositScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Deposit")),
+      appBar: AppBar(
+        title: const Text("Deposit"),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: Image.asset(
+                "assets/images/flash_icon.png",
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(Icons.bolt, size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

@@ -42,7 +42,23 @@ class _TransferScreenState extends State<TransferScreen> {
     final balance = WalletService.coinBalances[selectedCoin] ?? 0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Transfer")),
+      appBar: AppBar(
+        title: const Text("Transfer"),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: Image.asset(
+                "assets/images/send_icon.png",
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(Icons.send, size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -50,8 +66,7 @@ class _TransferScreenState extends State<TransferScreen> {
             Text("Balance: $balance $selectedCoin"),
             TextField(
               controller: walletController,
-              decoration:
-                  const InputDecoration(labelText: "Recipient Address"),
+              decoration: const InputDecoration(labelText: "Recipient Address"),
             ),
             TextField(
               controller: amountController,
