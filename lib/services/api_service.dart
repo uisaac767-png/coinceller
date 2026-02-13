@@ -4,7 +4,35 @@ import 'package:flutter/foundation.dart';
 import '../models/transaction_model.dart';
 
 class ApiService {
-  static const String _baseUrl = 'https://celler-backend.onrender.com/api';
+  static const List<String> _defaultBaseUrls = [
+    'https://celler-backend.onrender.com/api',
+    'http://10.0.2.2:5000/api',
+    'http://127.0.0.1:5000/api',
+    'http://localhost:5000/api',
+  ];
+  static List<String> _baseUrls = List<String>.from(_defaultBaseUrls);
+  static String _activeBaseUrl = _defaultBaseUrls.first;
+
+  static void configureBaseUrl(String baseUrl) {
+    final normalized = _normalizeApiBase(baseUrl);
+    if (normalized == null) return;
+
+    final merged = <String>[normalized, ..._defaultBaseUrls];
+    _baseUrls = merged.toSet().toList();
+    _activeBaseUrl = normalized;
+  }
+
+  static String? _normalizeApiBase(String? baseUrl) {
+    if (baseUrl == null) return null;
+    var value = baseUrl.trim();
+    if (value.isEmpty) return null;
+
+    value = value.replaceAll(RegExp(r'\/+$'), '');
+    if (!value.endsWith('/api')) {
+      value = '$value/api';
+    }
+    return value;
+  }
 
   // Helper method to handle HTTP errors gracefully
   static void _handleError(dynamic error, StackTrace? stackTrace) {
@@ -14,19 +42,57 @@ class ApiService {
     }
   }
 
+  static Future<http.Response> _post(
+    String path, {
+    required Map<String, dynamic> body,
+  }) async {
+    Object? lastError;
+    final tried = <String>{_activeBaseUrl, ..._baseUrls};
+    for (final baseUrl in tried) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$baseUrl$path'),
+              headers: {'Content-Type': 'application/json; charset=UTF-8'},
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 30));
+        _activeBaseUrl = baseUrl;
+        return response;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    throw Exception(lastError?.toString() ?? 'POST request failed');
+  }
+
+  static Future<http.Response> _get(String path) async {
+    Object? lastError;
+    final tried = <String>{_activeBaseUrl, ..._baseUrls};
+    for (final baseUrl in tried) {
+      try {
+        final response = await http
+            .get(Uri.parse('$baseUrl$path'))
+            .timeout(const Duration(seconds: 30));
+        _activeBaseUrl = baseUrl;
+        return response;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    throw Exception(lastError?.toString() ?? 'GET request failed');
+  }
+
   Future<dynamic> flashCrypto(TransactionModel transaction) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/crypto/flash'),
-            headers: {'Content-Type': 'application/json; charset=UTF-8'},
-            body: jsonEncode({
-              'address': transaction.address,
-              'amount': transaction.amount,
-              'currency': transaction.coin,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      final response = await _post(
+        '/crypto/flash',
+        body: {
+          'address': transaction.address,
+          'amount': transaction.amount,
+          'currency': transaction.coin,
+        },
+      );
       if (response.statusCode == 200) return jsonDecode(response.body);
       throw Exception('Failed to process crypto');
     } catch (e, st) {
@@ -37,9 +103,7 @@ class ApiService {
 
   Future<dynamic> getWalletBalance(String address) async {
     try {
-      final response = await http
-          .get(Uri.parse('$_baseUrl/crypto/balance/$address'))
-          .timeout(const Duration(seconds: 30));
+      final response = await _get('/crypto/balance/$address');
       if (response.statusCode == 200) return jsonDecode(response.body);
       throw Exception('Failed to get wallet balance');
     } catch (e, st) {
@@ -51,18 +115,15 @@ class ApiService {
   Future<dynamic> transferCrypto(String fromAddress, String toAddress,
       double amount, String currency) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/crypto/transfer'),
-            headers: {'Content-Type': 'application/json; charset=UTF-8'},
-            body: jsonEncode({
-              'fromAddress': fromAddress,
-              'toAddress': toAddress,
-              'amount': amount,
-              'currency': currency,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      final response = await _post(
+        '/transfer',
+        body: {
+          'fromAddress': fromAddress,
+          'toAddress': toAddress,
+          'amount': amount,
+          'currency': currency,
+        },
+      );
       if (response.statusCode == 200) return jsonDecode(response.body);
       throw Exception('Failed to transfer crypto');
     } catch (e, st) {
@@ -73,13 +134,10 @@ class ApiService {
 
   static Future<bool> login(String email, String password) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/auth/login'),
-            headers: {'Content-Type': 'application/json; charset=UTF-8'},
-            body: jsonEncode({'email': email, 'password': password}),
-          )
-          .timeout(const Duration(seconds: 30));
+      final response = await _post(
+        '/auth/login',
+        body: {'email': email, 'password': password},
+      );
       return response.statusCode == 200;
     } catch (e, st) {
       _handleError(e, st);
@@ -90,49 +148,43 @@ class ApiService {
   static Future<String?> signup(
       String username, String email, String password) async {
     try {
-      final attempts = <Map<String, dynamic>>[
-        {
-          'path': '/auth/register',
-          'body': {'username': username, 'email': email, 'password': password},
+      final response = await _post(
+        '/auth/register',
+        body: {
+          'username': username,
+          'email': email,
+          'password': password,
         },
-        {
-          'path': '/auth/signup',
-          'body': {'username': username, 'email': email, 'password': password},
-        },
-        {
-          'path': '/auth/register',
-          'body': {'name': username, 'email': email, 'password': password},
-        },
-        {
-          'path': '/auth/signup',
-          'body': {'email': email, 'password': password},
-        },
-      ];
+      );
 
-      String? lastError;
-
-      for (final attempt in attempts) {
-        final response = await http
-            .post(
-              Uri.parse('$_baseUrl${attempt['path']}'),
-              headers: {'Content-Type': 'application/json; charset=UTF-8'},
-              body: jsonEncode(attempt['body']),
-            )
-            .timeout(const Duration(seconds: 30));
-
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          return null;
-        }
-
-        lastError = _extractErrorMessage(response.body) ??
-            'Signup failed (${response.statusCode})';
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return null;
       }
 
-      return lastError ?? 'Signup request rejected by server';
+      return _extractErrorMessage(response.body) ??
+          'Signup failed (${response.statusCode})';
     } catch (e, st) {
       _handleError(e, st);
       return 'Could not reach server. Check internet/server and try again.';
     }
+  }
+
+  static Future<dynamic> getDashboard() async {
+    final response = await _get('/dashboard');
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load dashboard');
+  }
+
+  static Future<dynamic> getTransactions() async {
+    final response = await _get('/transaction');
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load transactions');
+  }
+
+  static Future<dynamic> getProfile() async {
+    final response = await _get('/profile');
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load profile');
   }
 
   static String? _extractErrorMessage(String body) {

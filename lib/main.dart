@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'services/app_config_service.dart';
 import 'screens/splash_screen.dart';
 import 'theme/bybit_theme.dart';
 
@@ -19,6 +20,7 @@ void main() {
   };
 
   runZonedGuarded<Future<void>>(() async {
+    await AppConfigService.initialize();
     runApp(const MyApp());
   }, (error, stack) {
     // Print the error so it appears in adb logcat for release builds.
