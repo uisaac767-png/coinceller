@@ -16,32 +16,65 @@ class TransferScreen extends StatefulWidget {
 
 class _TransferScreenState extends State<TransferScreen> {
   static const List<String> _coins = ['USDT', 'BTC', 'ETH', 'TRX'];
-  final senderWalletController = TextEditingController();
+  static const List<String> _walletTypes = [
+    'Binance',
+    'Bybit',
+    'Coinbase',
+    'Trust Wallet',
+    'MetaMask',
+    'Other',
+  ];
+
   final amountController = TextEditingController();
   final recipientWalletController = TextEditingController();
   final ApiService apiService = ApiService();
   bool loading = false;
   String selectedCoin = "USDT";
+  String selectedWalletType = "Binance";
+  String selectedNetwork = "ERC20";
+  String? senderAddress;
 
   @override
   void initState() {
     super.initState();
     _loadSavedWallet();
+    _syncNetworkForCoin();
   }
 
   Future<void> _loadSavedWallet() async {
     final saved = await LocalStorageService.getWalletAddress();
     if (saved != null && saved.isNotEmpty && mounted) {
-      senderWalletController.text = saved;
+      setState(() => senderAddress = saved);
     }
   }
 
   @override
   void dispose() {
-    senderWalletController.dispose();
     amountController.dispose();
     recipientWalletController.dispose();
     super.dispose();
+  }
+
+  List<String> _networksForCoin(String coin) {
+    switch (coin) {
+      case "USDT":
+        return ["ERC20", "TRC20", "BEP20"];
+      case "ETH":
+        return ["ETH"];
+      case "TRX":
+        return ["TRON"];
+      case "BTC":
+        return ["BTC"];
+      default:
+        return ["ERC20"];
+    }
+  }
+
+  void _syncNetworkForCoin() {
+    final networks = _networksForCoin(selectedCoin);
+    if (!networks.contains(selectedNetwork)) {
+      selectedNetwork = networks.first;
+    }
   }
 
   bool _isValidWalletAddress(String address) {
@@ -70,21 +103,48 @@ class _TransferScreenState extends State<TransferScreen> {
 
   Future<void> sendNow() async {
     final amount = double.tryParse(amountController.text) ?? 0;
-    final senderAddress = senderWalletController.text.trim();
     final recipientAddress = recipientWalletController.text.trim();
 
-    if (senderAddress.isEmpty || recipientAddress.isEmpty || amount <= 0) {
+    final sender = senderAddress?.trim() ?? "";
+
+    if (sender.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Set your wallet address first in Deposit."),
+        ),
+      );
+      return;
+    }
+
+    if (recipientAddress.isEmpty || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Invalid details")),
       );
       return;
     }
 
-    if (!_isValidWalletAddress(senderAddress)) {
+    if (selectedCoin == "BTC") {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              "Enter your real wallet address before transaction (T... or 0x...)"),
+          content: Text("BTC transfers are not enabled on this backend."),
+        ),
+      );
+      return;
+    }
+
+    if (selectedCoin == "USDT" && selectedNetwork != "ERC20") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("USDT only supports ERC20 on this backend."),
+        ),
+      );
+      return;
+    }
+
+    if (selectedCoin == "TRX" && selectedNetwork != "TRON") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("TRX only supports TRON network."),
         ),
       );
       return;
@@ -101,7 +161,7 @@ class _TransferScreenState extends State<TransferScreen> {
 
     setState(() => loading = true);
 
-    final senderExists = await _walletExists(senderAddress);
+    final senderExists = await _walletExists(sender);
     if (!senderExists) {
       if (!mounted) return;
       setState(() => loading = false);
@@ -115,24 +175,16 @@ class _TransferScreenState extends State<TransferScreen> {
 
     try {
       await apiService.transferCrypto(
-        senderAddress,
+        sender,
         recipientAddress,
         amount,
         selectedCoin,
+        network: selectedNetwork,
       );
 
-      final ok = WalletService.transfer(selectedCoin, amount, recipientAddress);
       if (!mounted) return;
       setState(() => loading = false);
 
-      if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Insufficient balance")),
-        );
-        return;
-      }
-
-      await LocalStorageService.setWalletAddress(senderAddress);
       amountController.clear();
       recipientWalletController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -152,6 +204,7 @@ class _TransferScreenState extends State<TransferScreen> {
   @override
   Widget build(BuildContext context) {
     final balance = WalletService.coinBalances[selectedCoin] ?? 0;
+    final networks = _networksForCoin(selectedCoin);
 
     return Scaffold(
       appBar: AppBar(
@@ -198,18 +251,75 @@ class _TransferScreenState extends State<TransferScreen> {
                   .toList(),
               onChanged: (v) {
                 if (v == null) return;
-                setState(() => selectedCoin = v);
+                setState(() {
+                  selectedCoin = v;
+                  _syncNetworkForCoin();
+                });
               },
             ),
             const SizedBox(height: 14),
-            CustomTextField(
-              controller: senderWalletController,
-              hintText: "Your Wallet Address (T... or 0x...)",
+            const Text(
+              "Recipient Wallet Type",
+              style: TextStyle(color: BybitTheme.subText, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            DropdownField<String>(
+              value: selectedWalletType,
+              items: _walletTypes
+                  .map((type) =>
+                      DropdownMenuItem(value: type, child: Text(type)))
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => selectedWalletType = v);
+              },
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              "Network",
+              style: TextStyle(color: BybitTheme.subText, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            DropdownField<String>(
+              value: selectedNetwork,
+              items: networks
+                  .map((network) =>
+                      DropdownMenuItem(value: network, child: Text(network)))
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => selectedNetwork = v);
+              },
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: BybitTheme.card,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.account_balance_wallet,
+                      color: BybitTheme.gold, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      senderAddress == null || senderAddress!.isEmpty
+                          ? "Your wallet address not set"
+                          : senderAddress!,
+                      style: const TextStyle(color: BybitTheme.text),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             CustomTextField(
               controller: recipientWalletController,
-              hintText: "Recipient Wallet Address",
+              hintText:
+                  "External Wallet Address (Binance, Bybit, Trust Wallet, etc.)",
             ),
             const SizedBox(height: 12),
             CustomTextField(

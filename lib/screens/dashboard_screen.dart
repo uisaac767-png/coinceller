@@ -45,6 +45,23 @@ class WalletHome extends StatefulWidget {
 
 class _WalletHomeState extends State<WalletHome> {
   bool hardRefreshing = false;
+  bool priceRefreshing = false;
+  bool pricesLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _primePrices();
+  }
+
+  Future<void> _primePrices() async {
+    if (pricesLoaded) return;
+    pricesLoaded = true;
+    await WalletService.refreshPrices();
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   Future<void> openDeposit() async {
     await Navigator.push(
@@ -72,6 +89,24 @@ class _WalletHomeState extends State<WalletHome> {
         const SnackBar(
           content: Text("Wallet refreshed"),
           backgroundColor: BybitTheme.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> refreshPricesNow() async {
+    if (priceRefreshing) return;
+    setState(() => priceRefreshing = true);
+    final result = await WalletService.refreshPrices();
+    if (!mounted) return;
+    setState(() => priceRefreshing = false);
+    setState(() {});
+
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result),
+          backgroundColor: Colors.orange.shade700,
         ),
       );
     }
@@ -105,6 +140,8 @@ class _WalletHomeState extends State<WalletHome> {
   @override
   Widget build(BuildContext context) {
     final totalUsd = WalletService.totalUsd();
+    final prices = WalletService.coinPriceUsd;
+    final balances = WalletService.coinBalances;
 
     return SafeArea(
       child: RefreshIndicator(
@@ -157,6 +194,41 @@ class _WalletHomeState extends State<WalletHome> {
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: BybitTheme.gold)),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      "Live Prices",
+                      style: TextStyle(
+                        color: BybitTheme.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: priceRefreshing ? null : refreshPricesNow,
+                    icon: priceRefreshing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.sync, color: BybitTheme.gold),
+                    tooltip: "Refresh Prices",
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Column(
+                children: [
+                  _priceRow("BTC", balances["BTC"] ?? 0, prices["BTC"]),
+                  _priceRow("ETH", balances["ETH"] ?? 0, prices["ETH"]),
+                  _priceRow("USDT", balances["USDT"] ?? 0, prices["USDT"]),
+                  _priceRow("TRX", balances["TRX"] ?? 0, prices["TRX"]),
+                  _priceRow("SOL", balances["SOL"] ?? 0, prices["SOL"]),
+                ],
+              ),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -214,6 +286,41 @@ class _WalletHomeState extends State<WalletHome> {
           size: 14,
           color: Colors.black54,
         ),
+      ),
+    );
+  }
+
+  Widget _priceRow(String coin, double balance, double? priceUsd) {
+    final priceText =
+        priceUsd == null ? "—" : "\$${priceUsd.toStringAsFixed(2)}";
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: BybitTheme.card,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              coin,
+              style: const TextStyle(
+                color: BybitTheme.text,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            balance.toStringAsFixed(6),
+            style: const TextStyle(color: BybitTheme.subText),
+          ),
+          const SizedBox(width: 14),
+          Text(
+            priceText,
+            style: const TextStyle(color: BybitTheme.gold),
+          ),
+        ],
       ),
     );
   }

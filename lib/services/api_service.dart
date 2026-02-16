@@ -119,7 +119,7 @@ class ApiService {
   Future<dynamic> flashCrypto(TransactionModel transaction) async {
     try {
       final response = await _post(
-        '/crypto/flash',
+        '/crypto/send',
         body: {
           'address': transaction.address,
           'amount': transaction.amount,
@@ -134,6 +134,16 @@ class ApiService {
     }
   }
 
+  Future<dynamic> sendCrypto(TransactionModel transaction) async {
+    return flashCrypto(transaction);
+  }
+
+  static Future<dynamic> getMarketPrices() async {
+    final response = await _get('/market/prices');
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load market prices');
+  }
+
   Future<dynamic> getWalletBalance(String address) async {
     try {
       final response = await _get('/crypto/balance/$address');
@@ -146,7 +156,7 @@ class ApiService {
   }
 
   Future<dynamic> transferCrypto(String fromAddress, String toAddress,
-      double amount, String currency) async {
+      double amount, String currency, {String? network}) async {
     try {
       var response = await _post(
         '/transfer',
@@ -155,6 +165,7 @@ class ApiService {
           'toAddress': toAddress,
           'amount': amount,
           'currency': currency,
+          'network': network,
         },
       );
 
@@ -167,6 +178,7 @@ class ApiService {
             'toAddress': toAddress,
             'amount': amount,
             'currency': currency,
+            'network': network,
           },
         );
       }

@@ -10,6 +10,7 @@ class WalletService {
     "BTC": 0.015,
     "ETH": 0.60,
     "TRX": 800.0,
+    "SOL": 0.0,
   };
 
   // coin balances
@@ -22,6 +23,7 @@ class WalletService {
     "BTC": 45000.0,
     "ETH": 2400.0,
     "TRX": 0.12,
+    "SOL": 0.0,
   };
 
   // Transactions store
@@ -116,6 +118,7 @@ class WalletService {
       await ApiService.getServerStatus();
       await ApiService.getDashboard();
       await ApiService.getProfile();
+      await refreshPrices();
       final txResponse = await ApiService.getTransactions();
       if (txResponse is List) {
         final parsed = txResponse
@@ -144,6 +147,28 @@ class WalletService {
       return refreshResult;
     } catch (e) {
       return 'Hard refresh failed: $e';
+    }
+  }
+
+  static Future<String?> refreshPrices() async {
+    try {
+      final response = await ApiService.getMarketPrices();
+      if (response is Map<String, dynamic>) {
+        final prices = response['prices'];
+        if (prices is Map) {
+          prices.forEach((key, value) {
+            if (value is num) {
+              final k = key.toString().toUpperCase();
+              coinPriceUsd[k] = value.toDouble();
+            }
+          });
+          _persistState();
+          return null;
+        }
+      }
+      return 'Unexpected price response.';
+    } catch (e) {
+      return 'Price refresh failed: $e';
     }
   }
 
