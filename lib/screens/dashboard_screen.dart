@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
 import '../theme/bybit_theme.dart';
 import '../widgets/bottom_navigator.dart';
 import '../services/wallet_service.dart';
@@ -536,34 +536,23 @@ class _WalletHomeState extends State<WalletHome> {
     final recent = candles.length > 120
         ? candles.sublist(candles.length - 120)
         : candles;
-    return SizedBox(
+    return Container(
       height: 240,
-      child: SfCartesianChart(
-        plotAreaBorderWidth: 0,
-        primaryXAxis: DateTimeAxis(
-          intervalType: DateTimeIntervalType.hours,
-          axisLine: const AxisLine(width: 0),
-          majorGridLines: const MajorGridLines(width: 0),
-          labelStyle: const TextStyle(color: BybitTheme.subText),
+      decoration: BoxDecoration(
+        color: BybitTheme.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BybitTheme.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+        child: LayoutBuilder(
+          builder: (_, constraints) {
+            return CustomPaint(
+              size: Size(constraints.maxWidth, constraints.maxHeight),
+              painter: _CandleChartPainter(data: recent),
+            );
+          },
         ),
-        primaryYAxis: NumericAxis(
-          axisLine: const AxisLine(width: 0),
-          majorGridLines:
-              const MajorGridLines(width: 0.5, color: BybitTheme.card2),
-          labelStyle: const TextStyle(color: BybitTheme.subText),
-        ),
-        series: <CandleSeries<_Candle, DateTime>>[
-          CandleSeries<_Candle, DateTime>(
-            dataSource: recent,
-            xValueMapper: (c, _) => c.time,
-            lowValueMapper: (c, _) => c.low,
-            highValueMapper: (c, _) => c.high,
-            openValueMapper: (c, _) => c.open,
-            closeValueMapper: (c, _) => c.close,
-            bearColor: BybitTheme.danger,
-            bullColor: BybitTheme.success,
-          ),
-        ],
       ),
     );
   }
@@ -583,4 +572,67 @@ class _Candle {
     required this.low,
     required this.close,
   });
+}
+
+class _CandleChartPainter extends CustomPainter {
+  final List<_Candle> data;
+
+  _CandleChartPainter({required this.data});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty || size.width <= 0 || size.height <= 0) return;
+
+    final high = data.fold<double>(data.first.high, (p, e) => math.max(p, e.high));
+    final low = data.fold<double>(data.first.low, (p, e) => math.min(p, e.low));
+    final range = (high - low).abs() < 1e-12 ? 1.0 : (high - low);
+
+    final gridPaint = Paint()
+      ..color = BybitTheme.card2
+      ..strokeWidth = 1;
+    const hLines = 4;
+    for (var i = 1; i <= hLines; i++) {
+      final y = size.height * i / (hLines + 1);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    final count = data.length;
+    final stepX = size.width / math.max(count, 1);
+    final bodyWidth = math.max(2.0, stepX * 0.55);
+
+    for (var i = 0; i < count; i++) {
+      final c = data[i];
+      final x = (i + 0.5) * stepX;
+
+      double toY(double price) => size.height - ((price - low) / range) * size.height;
+
+      final yHigh = toY(c.high);
+      final yLow = toY(c.low);
+      final yOpen = toY(c.open);
+      final yClose = toY(c.close);
+      final isBull = c.close >= c.open;
+
+      final wickPaint = Paint()
+        ..color = isBull ? BybitTheme.success : BybitTheme.danger
+        ..strokeWidth = 1.2;
+      canvas.drawLine(Offset(x, yHigh), Offset(x, yLow), wickPaint);
+
+      final top = math.min(yOpen, yClose);
+      final bottom = math.max(yOpen, yClose);
+      final rect = Rect.fromLTWH(
+        x - bodyWidth / 2,
+        top,
+        bodyWidth,
+        math.max(1.4, bottom - top),
+      );
+      final bodyPaint = Paint()
+        ..color = isBull ? BybitTheme.success : BybitTheme.danger;
+      canvas.drawRect(rect, bodyPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CandleChartPainter oldDelegate) {
+    return oldDelegate.data != data;
+  }
 }
