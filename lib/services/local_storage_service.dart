@@ -10,12 +10,18 @@ class LocalStorageService {
   static const String _passwordKey = 'saved_password';
   static const String _currencyKey = 'saved_currency';
   static const String _walletAddressKey = 'saved_wallet_address';
+  static const String _walletAddressesKey = 'saved_wallet_addresses';
+  static const String _authTokenKey = 'auth_token';
+  static const String _profileKey = 'profile_info';
   static const String _balancesKey = 'saved_coin_balances';
   static const String _transactionsKey = 'saved_transactions';
 
   static String? _savedEmail;
   static String? _savedPassword;
   static String? _savedWalletAddress;
+  static String? _authToken;
+  static Map<String, String>? _walletAddresses;
+  static Map<String, String>? _profile;
 
   static Currency _currency = Currency.usd;
 
@@ -37,9 +43,15 @@ class LocalStorageService {
   static Future<void> clearUser() async {
     _savedEmail = null;
     _savedPassword = null;
+    _authToken = null;
+    _profile = null;
+    _walletAddresses = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_emailKey);
     await prefs.remove(_passwordKey);
+    await prefs.remove(_authTokenKey);
+    await prefs.remove(_profileKey);
+    await prefs.remove(_walletAddressesKey);
   }
 
   static Future<void> setCurrency(Currency currency) async {
@@ -73,6 +85,62 @@ class LocalStorageService {
     final prefs = await SharedPreferences.getInstance();
     _savedWalletAddress = prefs.getString(_walletAddressKey);
     return _savedWalletAddress;
+  }
+
+  static Future<void> setWalletAddressForCoin(
+      String coinKey, String address) async {
+    final prefs = await SharedPreferences.getInstance();
+    _walletAddresses ??= {};
+    _walletAddresses![coinKey] = address;
+    await prefs.setString(_walletAddressesKey, jsonEncode(_walletAddresses));
+  }
+
+  static Future<String?> getWalletAddressForCoin(String coinKey) async {
+    if (_walletAddresses != null && _walletAddresses!.containsKey(coinKey)) {
+      return _walletAddresses![coinKey];
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_walletAddressesKey);
+    if (raw == null || raw.isEmpty) return null;
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return null;
+    _walletAddresses = decoded.map((k, v) => MapEntry(k, v.toString()));
+    return _walletAddresses![coinKey];
+  }
+
+  static Future<void> setAuthToken(String token) async {
+    _authToken = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_authTokenKey, token);
+  }
+
+  static Future<String?> getAuthToken() async {
+    if (_authToken != null && _authToken!.isNotEmpty) return _authToken;
+    final prefs = await SharedPreferences.getInstance();
+    _authToken = prefs.getString(_authTokenKey);
+    return _authToken;
+  }
+
+  static Future<void> setProfileInfo(
+      String username, String displayName, String email) async {
+    _profile = {
+      'username': username,
+      'displayName': displayName,
+      'email': email,
+    };
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_profileKey, jsonEncode(_profile));
+  }
+
+  static Future<Map<String, String>?> getProfileInfo() async {
+    if (_profile != null) return _profile;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_profileKey);
+    if (raw == null || raw.isEmpty) return null;
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return null;
+    _profile = decoded.map((k, v) => MapEntry(k, v.toString()));
+    return _profile;
   }
 
   static Future<void> saveCoinBalances(Map<String, double> balances) async {

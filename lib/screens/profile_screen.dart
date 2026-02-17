@@ -21,11 +21,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool backendOnline = false;
   bool checkingBackend = false;
   String backendBaseUrl = ApiService.activeBaseUrl;
+  String displayName = "User";
+  String email = "";
 
   @override
   void initState() {
     super.initState();
     loadCurrency();
+    loadProfile();
     checkBackendStatus();
   }
 
@@ -41,6 +44,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => currency = Currency.usd);
       }
     }
+  }
+
+  Future<void> loadProfile() async {
+    final cached = await LocalStorageService.getProfileInfo();
+    if (cached != null && mounted) {
+      setState(() {
+        displayName = cached['displayName'] ?? cached['username'] ?? "User";
+        email = cached['email'] ?? "";
+      });
+    }
+    try {
+      final profile = await ApiService.getProfile();
+      if (profile is Map && mounted) {
+        setState(() {
+          displayName =
+              profile['displayName']?.toString() ?? profile['username'] ?? "User";
+          email = profile['email']?.toString() ?? "";
+        });
+      }
+    } catch (_) {}
   }
 
   void changeCurrency(Currency newCurrency) async {
@@ -137,6 +160,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> editProfile() async {
+    final nameController = TextEditingController(text: displayName);
+    final usernameController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text("Edit Profile"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: "Display Name"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(labelText: "Username"),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != true) return;
+
+    try {
+      await ApiService.updateProfile(
+        displayName: nameController.text.trim().isEmpty
+            ? null
+            : nameController.text.trim(),
+        username: usernameController.text.trim().isEmpty
+            ? null
+            : usernameController.text.trim(),
+      );
+      await loadProfile();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Update failed: $e"),
+          backgroundColor: BybitTheme.danger,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,14 +303,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            const Text(
-              "Isaac Uche",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            Text(
+              displayName.isEmpty ? "User" : displayName,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
-            const Text(
-              "isaac@gmail.com",
-              style: TextStyle(color: BybitTheme.subText),
+            Text(
+              email.isEmpty ? "No email" : email,
+              style: const TextStyle(color: BybitTheme.subText),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: editProfile,
+              child: Text(
+                "Edit Profile",
+                style: TextStyle(color: BybitTheme.gold),
+              ),
             ),
 
             const SizedBox(height: 22),

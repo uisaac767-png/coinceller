@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../models/transaction_model.dart';
+import 'local_storage_service.dart';
 
 class ApiService {
   static const List<String> _defaultBaseUrls = [
@@ -45,6 +46,15 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, String>> _headers() async {
+    final headers = {'Content-Type': 'application/json; charset=UTF-8'};
+    final token = await LocalStorageService.getAuthToken();
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
+
   static Future<http.Response> _post(
     String path, {
     required Map<String, dynamic> body,
@@ -54,10 +64,11 @@ class ApiService {
     final tried = <String>{_activeBaseUrl, ..._baseUrls};
     for (final baseUrl in tried) {
       try {
+        final headers = await _headers();
         final response = await http
             .post(
               Uri.parse('$baseUrl$path'),
-              headers: {'Content-Type': 'application/json; charset=UTF-8'},
+              headers: headers,
               body: jsonEncode(body),
             )
             .timeout(timeout);
@@ -78,8 +89,10 @@ class ApiService {
     final tried = <String>{_activeBaseUrl, ..._baseUrls};
     for (final baseUrl in tried) {
       try {
-        final response =
-            await http.get(Uri.parse('$baseUrl$path')).timeout(timeout);
+        final headers = await _headers();
+        final response = await http
+            .get(Uri.parse('$baseUrl$path'), headers: headers)
+            .timeout(timeout);
         _activeBaseUrl = baseUrl;
         return response;
       } catch (e) {
@@ -87,6 +100,32 @@ class ApiService {
       }
     }
     throw Exception(lastError?.toString() ?? 'GET request failed');
+  }
+
+  static Future<http.Response> _put(
+    String path, {
+    required Map<String, dynamic> body,
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
+    Object? lastError;
+    final tried = <String>{_activeBaseUrl, ..._baseUrls};
+    for (final baseUrl in tried) {
+      try {
+        final headers = await _headers();
+        final response = await http
+            .put(
+              Uri.parse('$baseUrl$path'),
+              headers: headers,
+              body: jsonEncode(body),
+            )
+            .timeout(timeout);
+        _activeBaseUrl = baseUrl;
+        return response;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    throw Exception(lastError?.toString() ?? 'PUT request failed');
   }
 
   static String _rootFromApiBase(String apiBaseUrl) {
@@ -253,7 +292,26 @@ class ApiService {
         '/auth/login',
         body: {'email': email, 'password': password},
       );
-      return response.statusCode == 200;
+      if (response.statusCode != 200) return false;
+      final decoded = jsonDecode(response.body);
+      final token = decoded['token'];
+      if (token is String && token.isNotEmpty) {
+        await LocalStorageService.setAuthToken(token);
+      }
+      final user = decoded['user'];
+      if (user is Map) {
+        final username = user['username']?.toString() ?? '';
+        final displayName = user['displayName']?.toString() ?? username;
+        final emailValue = user['email']?.toString() ?? email;
+        if (username.isNotEmpty && emailValue.isNotEmpty) {
+          await LocalStorageService.setProfileInfo(
+            username,
+            displayName,
+            emailValue,
+          );
+        }
+      }
+      return true;
     } catch (e, st) {
       _handleError(e, st);
       return false;
@@ -324,8 +382,58 @@ class ApiService {
 
   static Future<dynamic> getProfile() async {
     final response = await _get('/profile');
-    if (response.statusCode == 200) return jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) {
+        final username = decoded['username']?.toString() ?? '';
+        final displayName = decoded['displayName']?.toString() ?? username;
+        final emailValue = decoded['email']?.toString() ?? '';
+        if (username.isNotEmpty && emailValue.isNotEmpty) {
+          await LocalStorageService.setProfileInfo(
+            username,
+            displayName,
+            emailValue,
+          );
+        }
+      }
+      return decoded;
+    }
     throw Exception('Failed to load profile');
+  }
+
+  static Future<dynamic> updateProfile({
+    String? username,
+    String? displayName,
+  }) async {
+    final body = <String, dynamic>{};
+    if (username != null) body['username'] = username;
+    if (displayName != null) body['displayName'] = displayName;
+    final response = await _put('/profile', body: body);
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) {
+        final u = decoded['username']?.toString() ?? '';
+        final d = decoded['displayName']?.toString() ?? u;
+        final e = decoded['email']?.toString() ?? '';
+        if (u.isNotEmpty && e.isNotEmpty) {
+          await LocalStorageService.setProfileInfo(u, d, e);
+        }
+      }
+      return decoded;
+    }
+    throw Exception('Failed to update profile');
+  }
+
+  static Future<dynamic> getWalletAddresses() async {
+    final response = await _get('/wallets/addresses');
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to get wallet addresses');
+  }
+
+  static Future<dynamic> generateWalletAddresses() async {
+    final response = await _post('/wallets/generate', body: {});
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to generate wallet addresses');
   }
 
   static String? _extractErrorMessage(String body) {

@@ -16,16 +16,21 @@ class DepositScreen extends StatefulWidget {
 
 class _DepositScreenState extends State<DepositScreen> {
   static const List<String> _coins = ['USDT', 'BTC', 'ETH', 'TRX', 'SOL'];
+  static const List<String> _usdtNetworks = ['ERC20', 'BEP20', 'TRC20'];
   final walletAddressController = TextEditingController();
   final amountController = TextEditingController();
   final ApiService apiService = ApiService();
   bool loading = false;
+  bool useGenerated = true;
+  bool generating = false;
+  String selectedNetwork = "ERC20";
   String selectedCoin = "USDT";
 
   @override
   void initState() {
     super.initState();
     _loadSavedWallet();
+    _loadGeneratedIfNeeded();
   }
 
   @override
@@ -42,10 +47,74 @@ class _DepositScreenState extends State<DepositScreen> {
     }
   }
 
+  Future<void> _loadGeneratedIfNeeded() async {
+    if (!useGenerated) return;
+    final cached =
+        await LocalStorageService.getWalletAddressForCoin(_coinKey());
+    if (cached != null && cached.isNotEmpty && mounted) {
+      walletAddressController.text = cached;
+      return;
+    }
+    await _refreshGeneratedAddress();
+  }
+
+  String _coinKey() {
+    if (selectedCoin == "USDT") return "USDT_$selectedNetwork";
+    return selectedCoin;
+  }
+
+  String? _pickAddress(Map<String, dynamic> wallets) {
+    if (selectedCoin == "USDT") {
+      if (selectedNetwork == "TRC20") return wallets['tron']?.toString();
+      if (selectedNetwork == "BEP20") return wallets['bsc']?.toString();
+      return wallets['evm']?.toString();
+    }
+    if (selectedCoin == "ETH") return wallets['evm']?.toString();
+    if (selectedCoin == "TRX") return wallets['tron']?.toString();
+    if (selectedCoin == "BTC") return wallets['btc']?.toString();
+    if (selectedCoin == "SOL") return wallets['sol']?.toString();
+    return null;
+  }
+
+  Future<void> _refreshGeneratedAddress() async {
+    if (generating) return;
+    setState(() => generating = true);
+    try {
+      final response = await ApiService.getWalletAddresses();
+      Map<String, dynamic>? wallets;
+      if (response is Map && response['wallets'] is Map) {
+        wallets = (response['wallets'] as Map)
+            .map((k, v) => MapEntry(k.toString(), v));
+      }
+      if (wallets == null) {
+        final created = await ApiService.generateWalletAddresses();
+        if (created is Map && created['wallets'] is Map) {
+          wallets = (created['wallets'] as Map)
+              .map((k, v) => MapEntry(k.toString(), v));
+        }
+      }
+      if (wallets != null) {
+        final address = _pickAddress(wallets) ?? "";
+        if (address.isNotEmpty) {
+          walletAddressController.text = address;
+          await LocalStorageService.setWalletAddressForCoin(
+            _coinKey(),
+            address,
+          );
+          await LocalStorageService.setWalletAddress(address);
+        }
+      }
+    } catch (_) {
+      // ignore for now
+    } finally {
+      if (mounted) setState(() => generating = false);
+    }
+  }
+
   bool _isValidWalletAddress(String address) {
     final tron = RegExp(r'^T[1-9A-HJ-NP-Za-km-z]{33}$');
     final eth = RegExp(r'^0x[a-fA-F0-9]{40}$');
-    final btc = RegExp(r'^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$');
+    final btc = RegExp(r'^(bc1|tb1|[13mn])[a-zA-HJ-NP-Z0-9]{25,62}$');
     final sol = RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$');
     return tron.hasMatch(address) ||
         eth.hasMatch(address) ||
@@ -84,6 +153,7 @@ class _DepositScreenState extends State<DepositScreen> {
 
     WalletService.deposit(selectedCoin, amount);
     await LocalStorageService.setWalletAddress(address);
+    await LocalStorageService.setWalletAddressForCoin(_coinKey(), address);
 
     if (!mounted) return;
     setState(() => loading = false);
@@ -137,13 +207,74 @@ class _DepositScreenState extends State<DepositScreen> {
               onChanged: (v) {
                 if (v == null) return;
                 setState(() => selectedCoin = v);
+                _loadGeneratedIfNeeded();
               },
             ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Switch(
+                  value: useGenerated,
+                  onChanged: (v) async {
+                    setState(() => useGenerated = v);
+                    if (useGenerated) {
+                      await _loadGeneratedIfNeeded();
+                    }
+                  },
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  "Use generated testnet address",
+                  style: TextStyle(
+                    color: BybitTheme.subText,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+            if (selectedCoin == "USDT")
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 6),
+                  const Text(
+                    "USDT Network",
+                    style: TextStyle(color: BybitTheme.subText, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownField<String>(
+                    value: selectedNetwork,
+                    items: _usdtNetworks
+                        .map((n) => DropdownMenuItem(
+                              value: n,
+                              child: Text(n),
+                            ))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() => selectedNetwork = v);
+                      _loadGeneratedIfNeeded();
+                    },
+                  ),
+                ],
+              ),
             const SizedBox(height: 14),
             CustomTextField(
               controller: walletAddressController,
               hintText: "Your Wallet Address (T... or 0x...)",
+              readOnly: useGenerated,
             ),
+            if (useGenerated)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: TextButton(
+                  onPressed: generating ? null : _refreshGeneratedAddress,
+                  child: Text(
+                    generating ? "Generating..." : "Regenerate address",
+                    style: TextStyle(color: BybitTheme.gold),
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
             CustomTextField(
               controller: amountController,
