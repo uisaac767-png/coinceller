@@ -114,7 +114,7 @@ class ApiService {
       }
     }
     throw Exception(lastError?.toString() ?? 'Failed to get server status');
-  }
+`  }
 
   Future<dynamic> flashCrypto(TransactionModel transaction) async {
     try {
