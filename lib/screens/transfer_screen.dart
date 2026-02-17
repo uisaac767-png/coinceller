@@ -37,11 +37,22 @@ class _TransferScreenState extends State<TransferScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSavedWallet();
     _syncNetworkForCoin();
+    _loadSenderAddress();
   }
 
-  Future<void> _loadSavedWallet() async {
+  String _coinKey() {
+    if (selectedCoin == "USDT") return "USDT_$selectedNetwork";
+    return selectedCoin;
+  }
+
+  Future<void> _loadSenderAddress() async {
+    final perCoin =
+        await LocalStorageService.getWalletAddressForCoin(_coinKey());
+    if (perCoin != null && perCoin.isNotEmpty && mounted) {
+      setState(() => senderAddress = perCoin);
+      return;
+    }
     final saved = await LocalStorageService.getWalletAddress();
     if (saved != null && saved.isNotEmpty && mounted) {
       setState(() => senderAddress = saved);
@@ -77,6 +88,7 @@ class _TransferScreenState extends State<TransferScreen> {
     if (!networks.contains(selectedNetwork)) {
       selectedNetwork = networks.first;
     }
+    _loadSenderAddress();
   }
 
   bool _isValidWalletAddressForNetwork(
@@ -284,6 +296,7 @@ class _TransferScreenState extends State<TransferScreen> {
               onChanged: (v) {
                 if (v == null) return;
                 setState(() => selectedNetwork = v);
+                _loadSenderAddress();
               },
             ),
             const SizedBox(height: 12),
