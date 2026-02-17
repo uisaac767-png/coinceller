@@ -15,7 +15,7 @@ class DepositScreen extends StatefulWidget {
 }
 
 class _DepositScreenState extends State<DepositScreen> {
-  static const List<String> _coins = ['USDT', 'BTC', 'ETH', 'TRX'];
+  static const List<String> _coins = ['USDT', 'BTC', 'ETH', 'TRX', 'SOL'];
   final walletAddressController = TextEditingController();
   final amountController = TextEditingController();
   final ApiService apiService = ApiService();
@@ -45,7 +45,12 @@ class _DepositScreenState extends State<DepositScreen> {
   bool _isValidWalletAddress(String address) {
     final tron = RegExp(r'^T[1-9A-HJ-NP-Za-km-z]{33}$');
     final eth = RegExp(r'^0x[a-fA-F0-9]{40}$');
-    return tron.hasMatch(address) || eth.hasMatch(address);
+    final btc = RegExp(r'^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$');
+    final sol = RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$');
+    return tron.hasMatch(address) ||
+        eth.hasMatch(address) ||
+        btc.hasMatch(address) ||
+        sol.hasMatch(address);
   }
 
   Future<void> depositNow() async {

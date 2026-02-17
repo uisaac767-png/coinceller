@@ -15,7 +15,7 @@ class TransferScreen extends StatefulWidget {
 }
 
 class _TransferScreenState extends State<TransferScreen> {
-  static const List<String> _coins = ['USDT', 'BTC', 'ETH', 'TRX'];
+  static const List<String> _coins = ['USDT', 'BTC', 'ETH', 'TRX', 'SOL'];
   static const List<String> _walletTypes = [
     'Binance',
     'Bybit',
@@ -65,6 +65,8 @@ class _TransferScreenState extends State<TransferScreen> {
         return ["TRON"];
       case "BTC":
         return ["BTC"];
+      case "SOL":
+        return ["SOL"];
       default:
         return ["ERC20"];
     }
@@ -77,10 +79,26 @@ class _TransferScreenState extends State<TransferScreen> {
     }
   }
 
-  bool _isValidWalletAddress(String address) {
+  bool _isValidWalletAddressForNetwork(
+    String address,
+    String coin,
+    String network,
+  ) {
     final tron = RegExp(r'^T[1-9A-HJ-NP-Za-km-z]{33}$');
     final eth = RegExp(r'^0x[a-fA-F0-9]{40}$');
-    return tron.hasMatch(address) || eth.hasMatch(address);
+    final btc = RegExp(r'^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$');
+    final sol = RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$');
+
+    if (coin == "USDT") {
+      if (network == "TRC20") return tron.hasMatch(address);
+      if (network == "BEP20") return eth.hasMatch(address);
+      return eth.hasMatch(address);
+    }
+    if (coin == "ETH") return eth.hasMatch(address);
+    if (coin == "TRX") return tron.hasMatch(address);
+    if (coin == "BTC") return btc.hasMatch(address);
+    if (coin == "SOL") return sol.hasMatch(address);
+    return eth.hasMatch(address) || tron.hasMatch(address);
   }
 
   Future<bool> _walletExists(String address) async {
@@ -123,34 +141,11 @@ class _TransferScreenState extends State<TransferScreen> {
       return;
     }
 
-    if (selectedCoin == "BTC") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("BTC transfers are not enabled on this backend."),
-        ),
-      );
-      return;
-    }
-
-    if (selectedCoin == "USDT" && selectedNetwork != "ERC20") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("USDT only supports ERC20 on this backend."),
-        ),
-      );
-      return;
-    }
-
-    if (selectedCoin == "TRX" && selectedNetwork != "TRON") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("TRX only supports TRON network."),
-        ),
-      );
-      return;
-    }
-
-    if (!_isValidWalletAddress(recipientAddress)) {
+    if (!_isValidWalletAddressForNetwork(
+      recipientAddress,
+      selectedCoin,
+      selectedNetwork,
+    )) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Wrong recipient address. Use a valid wallet address."),
