@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 import '../theme/bybit_theme.dart';
 import '../widgets/bottom_navigator.dart';
 import '../services/wallet_service.dart';
+import '../services/api_service.dart';
 import 'transfer_screen.dart';
 import 'transaction_screen.dart';
 import 'profile_screen.dart';
@@ -47,11 +51,33 @@ class _WalletHomeState extends State<WalletHome> {
   bool hardRefreshing = false;
   bool priceRefreshing = false;
   bool pricesLoaded = false;
+  bool onchainRefreshing = false;
+  bool candleRefreshing = false;
+  String candleCoin = "BTC";
+  List<_Candle> candles = [];
+  Timer? _priceTimer;
+  Timer? _candleTimer;
 
   @override
   void initState() {
     super.initState();
     _primePrices();
+    _refreshCandles();
+    _priceTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshPricesSilent(),
+    );
+    _candleTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) => _refreshCandles(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _priceTimer?.cancel();
+    _candleTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _primePrices() async {
@@ -112,6 +138,76 @@ class _WalletHomeState extends State<WalletHome> {
     }
   }
 
+  Future<void> _refreshPricesSilent() async {
+    if (priceRefreshing) return;
+    priceRefreshing = true;
+    await WalletService.refreshPrices();
+    priceRefreshing = false;
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> refreshOnchainNow() async {
+    if (onchainRefreshing) return;
+    setState(() => onchainRefreshing = true);
+    final result = await WalletService.refreshOnchainBalances();
+    if (!mounted) return;
+    setState(() => onchainRefreshing = false);
+    setState(() {});
+
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result),
+          backgroundColor: Colors.orange.shade700,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("External ledger refreshed"),
+          backgroundColor: BybitTheme.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> _refreshCandles() async {
+    if (candleRefreshing) return;
+    setState(() => candleRefreshing = true);
+    try {
+      final response = await ApiService.getMarketCandles(
+        candleCoin,
+        interval: "5m",
+      );
+      if (response is Map && response['candles'] is List) {
+        final parsed = <_Candle>[];
+        for (final raw in response['candles']) {
+          if (raw is Map) {
+            final t = raw['t'];
+            final o = raw['o'];
+            final h = raw['h'];
+            final l = raw['l'];
+            final c = raw['c'];
+            if (t is num && o is num && h is num && l is num && c is num) {
+              parsed.add(_Candle(
+                time: DateTime.fromMillisecondsSinceEpoch(t.toInt()),
+                open: o.toDouble(),
+                high: h.toDouble(),
+                low: l.toDouble(),
+                close: c.toDouble(),
+              ));
+            }
+          }
+        }
+        candles = parsed;
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => candleRefreshing = false);
+  }
+
   Future<void> hardRefreshNow() async {
     if (hardRefreshing) return;
     setState(() => hardRefreshing = true);
@@ -142,6 +238,7 @@ class _WalletHomeState extends State<WalletHome> {
     final totalUsd = WalletService.totalUsd();
     final prices = WalletService.coinPriceUsd;
     final balances = WalletService.coinBalances;
+    final onchain = WalletService.onchainBalances;
 
     return SafeArea(
       child: RefreshIndicator(
@@ -229,6 +326,82 @@ class _WalletHomeState extends State<WalletHome> {
                   _priceRow("SOL", balances["SOL"] ?? 0, prices["SOL"]),
                 ],
               ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      "External Ledger (On-chain)",
+                      style: TextStyle(
+                        color: BybitTheme.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onchainRefreshing ? null : refreshOnchainNow,
+                    icon: onchainRefreshing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.public, color: BybitTheme.gold),
+                    tooltip: "Refresh external ledger",
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              onchain.isEmpty
+                  ? const Text(
+                      "No external ledger balances yet",
+                      style: TextStyle(color: BybitTheme.subText),
+                    )
+                  : Column(
+                      children: onchain.entries
+                          .map((e) => _externalRow(e.key, e.value))
+                          .toList(),
+                    ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      "Candlesticks (5m)",
+                      style: TextStyle(
+                        color: BybitTheme.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  DropdownButton<String>(
+                    value: candleCoin,
+                    dropdownColor: BybitTheme.card,
+                    items: const ["BTC", "ETH", "USDT", "TRX", "SOL"]
+                        .map((c) =>
+                            DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() => candleCoin = v);
+                      _refreshCandles();
+                    },
+                  ),
+                  IconButton(
+                    onPressed: candleRefreshing ? null : _refreshCandles,
+                    icon: candleRefreshing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.show_chart, color: BybitTheme.gold),
+                    tooltip: "Refresh candles",
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _candlesChart(),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -324,4 +497,90 @@ class _WalletHomeState extends State<WalletHome> {
       ),
     );
   }
+
+  Widget _externalRow(String label, double balance) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: BybitTheme.card,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: BybitTheme.text,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            balance.toStringAsFixed(6),
+            style: const TextStyle(color: BybitTheme.subText),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _candlesChart() {
+    if (candles.isEmpty) {
+      return const Text(
+        "No candle data yet",
+        style: TextStyle(color: BybitTheme.subText),
+      );
+    }
+    final recent = candles.length > 120
+        ? candles.sublist(candles.length - 120)
+        : candles;
+    return SizedBox(
+      height: 240,
+      child: SfCartesianChart(
+        plotAreaBorderWidth: 0,
+        primaryXAxis: DateTimeAxis(
+          intervalType: DateTimeIntervalType.hours,
+          axisLine: const AxisLine(width: 0),
+          majorGridLines: const MajorGridLines(width: 0),
+          labelStyle: const TextStyle(color: BybitTheme.subText),
+        ),
+        primaryYAxis: NumericAxis(
+          axisLine: const AxisLine(width: 0),
+          majorGridLines:
+              const MajorGridLines(width: 0.5, color: BybitTheme.card2),
+          labelStyle: const TextStyle(color: BybitTheme.subText),
+        ),
+        series: <CandleSeries<_Candle, DateTime>>[
+          CandleSeries<_Candle, DateTime>(
+            dataSource: recent,
+            xValueMapper: (c, _) => c.time,
+            lowValueMapper: (c, _) => c.low,
+            highValueMapper: (c, _) => c.high,
+            openValueMapper: (c, _) => c.open,
+            closeValueMapper: (c, _) => c.close,
+            bearColor: BybitTheme.danger,
+            bullColor: BybitTheme.success,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Candle {
+  final DateTime time;
+  final double open;
+  final double high;
+  final double low;
+  final double close;
+
+  const _Candle({
+    required this.time,
+    required this.open,
+    required this.high,
+    required this.low,
+    required this.close,
+  });
 }

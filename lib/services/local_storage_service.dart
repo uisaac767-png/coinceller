@@ -108,6 +108,19 @@ class LocalStorageService {
     return _walletAddresses![coinKey];
   }
 
+  static Future<Map<String, String>> getAllWalletAddresses() async {
+    if (_walletAddresses != null) {
+      return Map<String, String>.from(_walletAddresses!);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_walletAddressesKey);
+    if (raw == null || raw.isEmpty) return {};
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return {};
+    _walletAddresses = decoded.map((k, v) => MapEntry(k, v.toString()));
+    return Map<String, String>.from(_walletAddresses!);
+  }
+
   static Future<void> setAuthToken(String token) async {
     _authToken = token;
     final prefs = await SharedPreferences.getInstance();

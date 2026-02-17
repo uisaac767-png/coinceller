@@ -190,11 +190,39 @@ class ApiService {
     throw Exception('Failed to load market prices');
   }
 
+  static Future<dynamic> getMarketCandles(
+    String coin, {
+    String interval = '5m',
+  }) async {
+    final response =
+        await _get('/market/candles?coin=$coin&interval=$interval');
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load market candles');
+  }
+
   Future<dynamic> getWalletBalance(String address) async {
     try {
       final response = await _get('/crypto/balance/$address');
       if (response.statusCode == 200) return jsonDecode(response.body);
       throw Exception('Failed to get wallet balance');
+    } catch (e, st) {
+      _handleError(e, st);
+      rethrow;
+    }
+  }
+
+  Future<dynamic> getOnchainBalance(
+    String address,
+    String currency, {
+    String? network,
+  }) async {
+    try {
+      final net = network == null || network.isEmpty ? '' : '&network=$network';
+      final response = await _get(
+        '/crypto/onchain-balance/$address?currency=$currency$net',
+      );
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      throw Exception('Failed to get on-chain balance');
     } catch (e, st) {
       _handleError(e, st);
       rethrow;
@@ -218,6 +246,7 @@ class ApiService {
           'amount': amount,
           'currency': currency,
           'network': network,
+          'forceOnChain': true,
           if (memo != null && memo.trim().isNotEmpty) 'memo': memo.trim(),
         },
       );
@@ -232,13 +261,16 @@ class ApiService {
             'amount': amount,
             'currency': currency,
             'network': network,
+            'forceOnChain': true,
             if (memo != null && memo.trim().isNotEmpty) 'memo': memo.trim(),
           },
         );
       }
 
       if (response.statusCode == 200) return jsonDecode(response.body);
-      throw Exception('Failed to transfer crypto');
+      final message =
+          _extractErrorMessage(response.body) ?? 'Failed to transfer crypto';
+      throw Exception(message);
     } catch (e, st) {
       _handleError(e, st);
       rethrow;

@@ -17,6 +17,9 @@ class WalletService {
   static final Map<String, double> coinBalances =
       Map<String, double>.from(_defaultCoinBalances);
 
+  // on-chain balances (external ledger)
+  static final Map<String, double> onchainBalances = {};
+
   // coin price in USD (for total balance calculation)
   static final Map<String, double> coinPriceUsd = {
     "USDT": 1.0,
@@ -137,6 +140,46 @@ class WalletService {
       return null;
     } catch (e) {
       return 'Refresh failed: $e';
+    }
+  }
+
+  static Future<String?> refreshOnchainBalances() async {
+    try {
+      final api = ApiService();
+      final addresses = await LocalStorageService.getAllWalletAddresses();
+      if (addresses.isEmpty) {
+        return 'No external ledger addresses saved yet.';
+      }
+
+      onchainBalances.clear();
+      for (final entry in addresses.entries) {
+        final key = entry.key.toUpperCase();
+        final address = entry.value;
+        if (address.trim().isEmpty) continue;
+
+        String coin = key;
+        String? network;
+        if (key.startsWith('USDT_')) {
+          coin = 'USDT';
+          network = key.substring('USDT_'.length);
+        }
+
+        final response = await api.getOnchainBalance(
+          address,
+          coin,
+          network: network,
+        );
+
+        if (response is Map && response['balance'] is num) {
+          final balance = (response['balance'] as num).toDouble();
+          final label = network == null ? coin : '${coin}_$network';
+          onchainBalances[label] = balance;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      return 'External ledger refresh failed: $e';
     }
   }
 

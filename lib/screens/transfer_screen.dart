@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/wallet_service.dart';
@@ -131,6 +132,12 @@ class _TransferScreenState extends State<TransferScreen> {
     return raw.replaceFirst("Exception: ", "");
   }
 
+  Future<void> _openExplorer(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   Future<void> sendNow() async {
     final amount = double.tryParse(amountController.text) ?? 0;
     final recipientAddress = recipientWalletController.text.trim();
@@ -181,7 +188,7 @@ class _TransferScreenState extends State<TransferScreen> {
     }
 
     try {
-      await apiService.transferCrypto(
+      final result = await apiService.transferCrypto(
         sender,
         recipientAddress,
         amount,
@@ -194,9 +201,54 @@ class _TransferScreenState extends State<TransferScreen> {
 
       amountController.clear();
       recipientWalletController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Transfer successful")),
-      );
+      final txHash = result is Map ? result['txHash']?.toString() : null;
+      final explorerUrl =
+          result is Map ? result['explorerUrl']?.toString() : null;
+      if (txHash != null && txHash.isNotEmpty) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Transfer submitted"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "FLOW: FLUTTER APP -> NODE.JS BACKEND -> RPC -> "
+                  "BLOCKCHAIN NETWORK -> RECEIVER WALLET CREDITED",
+                ),
+                const SizedBox(height: 12),
+                Text("Tx Hash: $txHash"),
+                if (explorerUrl != null && explorerUrl.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    explorerUrl,
+                    style: const TextStyle(
+                      color: BybitTheme.gold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              if (explorerUrl != null && explorerUrl.isNotEmpty)
+                TextButton(
+                  onPressed: () => _openExplorer(explorerUrl),
+                  child: const Text("View on explorer"),
+                ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Transfer successful")),
+        );
+      }
       setState(() {});
       await WalletService.syncWalletFromBackend(coin: selectedCoin);
     } catch (e) {
