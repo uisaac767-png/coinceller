@@ -116,7 +116,10 @@ class ApiService {
     throw Exception(lastError?.toString() ?? 'Failed to get server status');
   }
 
-  Future<dynamic> flashCrypto(TransactionModel transaction) async {
+  Future<dynamic> flashCrypto(
+    TransactionModel transaction, {
+    String? memo,
+  }) async {
     try {
       final response = await _post(
         '/crypto/send',
@@ -124,6 +127,7 @@ class ApiService {
           'address': transaction.address,
           'amount': transaction.amount,
           'currency': transaction.coin,
+          if (memo != null && memo.trim().isNotEmpty) 'memo': memo.trim(),
         },
       );
       if (response.statusCode == 200) return jsonDecode(response.body);
@@ -134,8 +138,11 @@ class ApiService {
     }
   }
 
-  Future<dynamic> sendCrypto(TransactionModel transaction) async {
-    return flashCrypto(transaction);
+  Future<dynamic> sendCrypto(
+    TransactionModel transaction, {
+    String? memo,
+  }) async {
+    return flashCrypto(transaction, memo: memo);
   }
 
   static Future<dynamic> getMarketPrices() async {
@@ -155,8 +162,14 @@ class ApiService {
     }
   }
 
-  Future<dynamic> transferCrypto(String fromAddress, String toAddress,
-      double amount, String currency, {String? network}) async {
+  Future<dynamic> transferCrypto(
+    String fromAddress,
+    String toAddress,
+    double amount,
+    String currency, {
+    String? network,
+    String? memo,
+  }) async {
     try {
       var response = await _post(
         '/transfer',
@@ -166,6 +179,7 @@ class ApiService {
           'amount': amount,
           'currency': currency,
           'network': network,
+          if (memo != null && memo.trim().isNotEmpty) 'memo': memo.trim(),
         },
       );
 
@@ -179,6 +193,7 @@ class ApiService {
             'amount': amount,
             'currency': currency,
             'network': network,
+            if (memo != null && memo.trim().isNotEmpty) 'memo': memo.trim(),
           },
         );
       }
